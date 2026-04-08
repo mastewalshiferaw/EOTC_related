@@ -1,0 +1,32 @@
+# --- Python and Virtual Environments ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Django Secrets and Local Settings ---
+.env
+local_settings.py
+
+# --- Databases ---
+db.sqlite3
+db.sqlite3-journal
+
+# --- Static and Media Files ---
+static/
+media/
+*.log
+
+# --- IDE and Editor Settings ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Testing and Coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
