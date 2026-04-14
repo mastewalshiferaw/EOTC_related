@@ -1,6 +1,33 @@
 from django.shortcuts import render, redirect
 from .models import Paragraph
+from .forms import ParagraphForm
 import random
+
+def dashboard(request):
+    # This shows your progress
+    paragraphs = Paragraph.objects.filter(user=request.user)
+    return render(request, 'tracker/dashboard.html', {'paragraphs': paragraphs})
+
+def upload_view(request):
+    if request.method == 'POST':
+        form = ParagraphForm(request.POST, request.FILES)
+        if form.is_valid():
+            p = form.save(commit=False)
+            p.user = request.user
+            p.save()
+            return redirect('dashboard')
+    else:
+        form = ParagraphForm()
+    return render(request, 'tracker/upload.html', {'form': form})
+
+def daily_recall(request):
+    # Randomly get one paragraph to revise
+    paragraphs = Paragraph.objects.filter(user=request.user)
+    if not paragraphs.exists():
+        return redirect('upload_view')
+    
+    challenge = random.choice(paragraphs)
+    return render(request, 'tracker/recall.html', {'para': challenge})
 
 def upload_paragraph(request):
     if request.method == 'POST':

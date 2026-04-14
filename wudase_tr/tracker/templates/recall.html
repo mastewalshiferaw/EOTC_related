@@ -1,0 +1,15 @@
+<html>
+<head>
+    <title>recall</title>
+</head>
+]<div class="container">
+    <h1>Recall this:</h1>
+    <img src="{{ para.image.url }}" style="max-width: 500px;">
+    
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" name="action" value="remembered">I remembered this!</button>
+        <button type="button" onclick="location.reload()">Skip</button>
+    </form>
+</div>
+</html>
