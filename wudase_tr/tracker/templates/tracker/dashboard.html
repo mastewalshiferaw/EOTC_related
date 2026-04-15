@@ -1,0 +1,17 @@
+{% extends 'tracker/base.html' %}
+{% block content %}
+<h2>Your Memorized Paragraphs</h2>
+<div class="row">
+    {% for p in paragraphs %}
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ p.day_name }} - Part {{ p.order_index }}</h5>
+                <img src="{{ p.image.url }}" class="img-fluid" style="height: 100px;">
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<a href="{% url 'upload_view' %}" class="btn btn-success">Add New Paragraph</a>
+{% endblock %}
