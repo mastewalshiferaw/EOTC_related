@@ -1,12 +1,17 @@
-from django.shortcuts import render, redirect
-from .models import Paragraph
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from .models import Paragraph, DailyReview
 from .forms import ParagraphForm
 import random
 
 def dashboard(request):
-    # This shows your progress
+    # Calculate streak (simple version)
+    streak = DailyReview.objects.filter(user=request.user).count()
     paragraphs = Paragraph.objects.filter(user=request.user)
-    return render(request, 'tracker/dashboard.html', {'paragraphs': paragraphs})
+    return render(request, 'tracker/dashboard.html', {
+        'paragraphs': paragraphs,
+        'streak': streak
+    })
 
 def upload_view(request):
     if request.method == 'POST':
@@ -21,34 +26,28 @@ def upload_view(request):
     return render(request, 'tracker/upload.html', {'form': form})
 
 def daily_recall(request):
-    # Randomly get one paragraph to revise
-    paragraphs = Paragraph.objects.filter(user=request.user)
-    if not paragraphs.exists():
-        return redirect('upload_view')
-    
-    challenge = random.choice(paragraphs)
-    return render(request, 'tracker/recall.html', {'para': challenge})
-
-def upload_paragraph(request):
     if request.method == 'POST':
-        # Logic to save the uploaded image
-        # User selects Day, Order Index, and uploads file
-        new_p = Paragraph.objects.create(
-            user=request.user,
-            image=request.FILES['para_image'],
-            day_name=request.POST['day'],
-            order_index=request.POST['order']
-        )
-        return redirect('dashboard')
-    return render(request, 'upload.html')
+        para_id = request.POST.get('para_id')
+        para = get_object_or_404(Paragraph, id=para_id)
+        
+        # 1. Mark paragraph as reviewed
+        para.last_reviewed = timezone.now().date()
+        para.save()
+        
+        # 2. Log in DailyReview model
+        today = timezone.now().date()
+        daily_log, created = DailyReview.objects.get_or_create(user=request.user, date=today)
+        daily_log.paragraphs_reviewed.add(para)
+        
+        return redirect('daily_recall')
 
-def daily_challenge(request):
-    # Get all paragraphs the user has uploaded
-    user_paragraphs = Paragraph.objects.filter(user=request.user)
-    
-    if not user_paragraphs.exists():
-        return redirect('upload_paragraph')
+    # Get paragraphs NOT reviewed today
+    to_review = Paragraph.objects.filter(user=request.user).exclude(
+        last_reviewed=timezone.now().date()
+    ).order_by('last_reviewed')
 
-    # Randomly pick one for recall
-    challenge = random.choice(user_paragraphs)
-    return render(request, 'challenge.html', {'para': challenge})
+    if not to_review.exists():
+        return render(request, 'tracker/finished.html')
+
+    challenge = to_review.first()
+    return render(request, 'tracker/recall.html', {'para': challenge})

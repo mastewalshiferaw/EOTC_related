@@ -1,15 +1,16 @@
-<html>
-<head>
-    <title>recall</title>
-</head>
-]<div class="container">
-    <h1>Recall this:</h1>
-    <img src="{{ para.image.url }}" style="max-width: 500px;">
+{% extends 'tracker/base.html' %}
+{% block content %}
+<div class="text-center">
+    <h2>Recall: {{ para.day_name }} - Part {{ para.order_index }}</h2>
+    <div class="my-4">
+        <img src="{{ para.image.url }}" class="img-fluid border shadow" style="max-height: 500px;">
+    </div>
     
     <form method="POST">
         {% csrf_token %}
-        <button type="submit" name="action" value="remembered">I remembered this!</button>
-        <button type="button" onclick="location.reload()">Skip</button>
+        <input type="hidden" name="para_id" value="{{ para.id }}">
+        <button type="submit" class="btn btn-success btn-lg px-5">I Remembered It!</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-lg">Back to List</a>
     </form>
 </div>
-</html>
+{% endblock %}
