@@ -8,7 +8,7 @@ class Paragraph(models.Model):
     order_index = models.IntegerField() # 1, 2, 3...
     is_mastered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    last_reviewed = models.DateField(null=True, blank=True)
     def __str__(self):
         return f"{self.user.username} - {self.day_name} - Part {self.order_index}"
 
