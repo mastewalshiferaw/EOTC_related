@@ -8,6 +8,10 @@
             <div class="card-body">
                 <h5 class="card-title">{{ p.day_name }} - Part {{ p.order_index }}</h5>
                 <img src="{{ p.image.url }}" class="img-fluid" style="height: 100px;">
+
+                <div class="alert alert-info">
+    <h3>🔥 Current Streak: {{ streak }} Days</h3>
+</div>
             </div>
         </div>
     </div>
