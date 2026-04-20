@@ -1,0 +1,13 @@
+{% extends 'tracker/base.html' %}
+{% block content %}
+<div class="text-center mt-5">
+    <h1 class="display-4">ስልኩ ተጠናቋል!</h1> <!-- "The cycle is finished!" -->
+    <p class="lead">You have recalled all your paragraphs for today. Keep this pace!</p>
+    <div class="mt-4">
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
+
+
+
