@@ -9,6 +9,7 @@ class Paragraph(models.Model):
     is_mastered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_reviewed = models.DateField(null=True, blank=True)
+    
     def __str__(self):
         return f"{self.user.username} - {self.day_name} - Part {self.order_index}"
 
@@ -24,3 +25,12 @@ class ReviewLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} reviewed {self.paragraph.day_name} on {self.reviewed_at}"
+    
+
+
+class ReviewLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    paragraph = models.ForeignKey(Paragraph, on_delete=models.CASCADE)
+    reviewed_at = models.DateField(auto_now_add=True)
+    # 1=Forgot, 2=Hard, 3=Easy
+    rating = models.IntegerField(default=1)

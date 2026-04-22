@@ -3,21 +3,22 @@ from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from datetime import date, timedelta
-from .models import Paragraph, DailyReview, ReviewLog # Ensure you have ReviewLog if you use it
+from .models import Paragraph, DailyReview, ReviewLog
 from .forms import ParagraphForm
 
 @login_required
 def dashboard(request):
-    # Get all unique dates the user reviewed anything
     reviewed_dates = DailyReview.objects.filter(user=request.user).values_list('date', flat=True).order_by('-date')
     
     streak = 0
-    current_date = date.today()
-    
-    # Check today, then yesterday, then the day before...
-    while current_date in reviewed_dates:
+    check_date = date.today()
+    # Check if we should count today or start from yesterday if not reviewed yet
+    if check_date not in reviewed_dates:
+        check_date -= timedelta(days=1)
+        
+    while check_date in reviewed_dates:
         streak += 1
-        current_date -= timedelta(days=1)
+        check_date -= timedelta(days=1)
         
     paragraphs = Paragraph.objects.filter(user=request.user)
     return render(request, 'tracker/dashboard.html', {
@@ -44,34 +45,33 @@ def daily_recall(request):
     
     if request.method == 'POST':
         para_id = request.POST.get('para_id')
+        rating = request.POST.get('rating', '1') # Default to 1 if missing
         para = get_object_or_404(Paragraph, id=para_id, user=request.user)
         
-        # 1. Update paragraph's last_reviewed date
+        # 1. Log the difficulty rating
+        ReviewLog.objects.create(user=request.user, paragraph=para, rating=rating)
+        
+        # 2. Update paragraph
         para.last_reviewed = today
         para.save()
         
-        # 2. Log in DailyReview model
+        # 3. Log in DailyReview
         daily_log, created = DailyReview.objects.get_or_create(user=request.user, date=today)
         daily_log.paragraphs_reviewed.add(para)
         
-        messages.success(request, "Recorded! Keep going.")
         return redirect('daily_recall')
 
-    # Get paragraphs NOT reviewed today
     to_review = Paragraph.objects.filter(user=request.user).exclude(last_reviewed=today)
     
     if not to_review.exists():
         return render(request, 'tracker/finished.html')
 
-    # Get the count for your progress bar logic
     total_paragraphs = Paragraph.objects.filter(user=request.user).count()
-    remaining_count = to_review.count()
-
-    # Sort by last_reviewed so the oldest ones come first
+    remaining = to_review.count()
     challenge = to_review.order_by('last_reviewed').first()
     
     return render(request, 'tracker/recall.html', {
         'para': challenge,
-        'remaining': remaining_count,
+        'remaining': remaining,
         'total': total_paragraphs
     })
