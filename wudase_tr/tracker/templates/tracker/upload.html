@@ -1,0 +1,9 @@
+{% extends 'tracker/base.html' %}
+{% block content %}
+<h2>Upload New Paragraph</h2>
+<form method="POST" enctype="multipart/form-data" class="bg-white p-4 rounded shadow">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Save to Library</button>
+</form>
+{% endblock %}

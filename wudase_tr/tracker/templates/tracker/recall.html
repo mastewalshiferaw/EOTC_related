@@ -1,0 +1,31 @@
+{% extends 'tracker/base.html' %}
+{% block content %}
+<div class="text-center">
+    <h2>Recall: {{ para.day_name }} - Part {{ para.order_index }}</h2>
+    
+    <!-- Progress Bar -->
+    {% with percent=remaining|divisibleby:total %}
+    <div class="progress my-3" style="height: 20px;">
+        <div class="progress-bar bg-success" role="progressbar" style="width: {{ percent }}%;">
+            {{ remaining }} remaining
+        </div>
+    </div>
+    {% endwith %}
+
+    <div class="my-4">
+        <img src="{{ para.image.url }}" class="img-fluid border shadow" style="max-height: 500px;">
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="para_id" value="{{ para.id }}">
+        
+        <p>How well did you recall this?</p>
+        <div class="btn-group btn-group-lg">
+            <button type="submit" name="rating" value="1" class="btn btn-danger">Forgot</button>
+            <button type="submit" name="rating" value="2" class="btn btn-warning">Hard</button>
+            <button type="submit" name="rating" value="3" class="btn btn-success">Easy</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
