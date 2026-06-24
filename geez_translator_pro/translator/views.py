@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import GezDocumentSerializer
 from .services import extract_geez_from_image
+from .translation_service import translate_text
+
 
 class DocumentUploadView(APIView):
     def post(self, request, *args, **kwargs):
@@ -12,20 +14,26 @@ class DocumentUploadView(APIView):
             # 1. Save the file to the database
             doc = serializer.save()
             
-            # 2. Get the absolute path of the uploaded file
-            image_path = doc.file.path
-            
-            # 3. Run OCR (Ge'ez Extraction)
-            extracted_text = extract_geez_from_image(image_path)
-            
-            # 4. Update the record with the text
+            # 2. Run OCR (Ge'ez Extraction)
+            extracted_text = extract_geez_from_image(doc.file.path)
             doc.extracted_geez_text = extracted_text
+            #image_path = doc.file.path
+            
+            # 3. Run Translation (to Amharic by default)
+            #you can also get 'target_lang' from request.data if you want
+            try:
+                translated = translate_text(extracted_text, target_lang="amh_Ethi")
+                doc.translated_text = translated
+            except Exception as e:
+                doc.translated_text = f"Translation Error: {str(e)}"
+             
+            # 4. Save all results
             doc.save()
             
             return Response({
-                "message": "File processed successfully",
-                "geez_text": extracted_text,
-                "document_id": doc.id
+                "id": doc.id,
+                "original_geez": doc.extracted_geez_text,
+                "translated_text": doc.translated_text
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
