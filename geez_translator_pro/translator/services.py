@@ -1,6 +1,8 @@
 import pytesseract
 from PIL import Image
+from pdf2image import convert_from_path
 import os
+
 
 def extract_geez_from_image(image_path):
     """
@@ -14,4 +16,22 @@ def extract_geez_from_image(image_path):
     except Exception as e:
         return f"Error during OCR: {str(e)}"
    
+
+
+
+def extract_text_from_any_file(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    
+    if ext == '.pdf':
+        # Convert PDF pages to images
+        pages = convert_from_path(file_path)
+        full_text = ""
+        for page in pages:
+            # Run OCR on each page
+            text = pytesseract.image_to_string(page, lang='amh')
+            full_text += text + "\n\n"
+        return full_text
+    else:
+        # It's an image
+        return extract_geez_from_image(file_path)
     
