@@ -1,29 +1,60 @@
-# Python cache
+# ==================================================
+# Python / Django
+# ==================================================
+
+# Byte-compiled / cache
 __pycache__/
 *.py[cod]
-*.pyo
 *.pyd
 
-# Virtual environment
+# Virtual environments
 venv/
-env/
 .venv/
+env/
+backend/venv/
 
-# Django stuff
+# Django
 db.sqlite3
+backend/db.sqlite3
+
+# Logs
 *.log
 
-# Media & static (optional depending on setup)
+# Media & static
 media/
+backend/media/
 staticfiles/
+backend/staticfiles/
 
 # Environment variables
 .env
+.env.*
 
+# ==================================================
+# Node.js / Next.js
+# ==================================================
+
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Package manager logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# ==================================================
 # IDEs
+# ==================================================
+
 .vscode/
 .idea/
 
-# OS files
+# ==================================================
+# Operating System
+# ==================================================
+
 .DS_Store
 Thumbs.db
