@@ -65,7 +65,7 @@ export default function GezTranslator() {
           </div>
           <div>
             <h2 className="font-bold mb-2">Translation (Amharic/English)</h2>
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg h-64 overflow-y-auto whitespace-pre-wrap">
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg h-64 overflow-y-auto whitespace-pre-wrap text-blue-900 font-medium">
               {translatedText || "Translation will appear here..."}
             </div>
           </div>
