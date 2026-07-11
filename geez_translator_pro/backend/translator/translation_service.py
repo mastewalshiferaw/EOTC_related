@@ -10,24 +10,25 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
 
 def translate_text(text, target_lang="amh_Ethi"):
-    """
-    Translates text to Amharic (amh_Ethi) or English (eng_Latn).
-    Since Ge'ez is a parent to Amharic, NLLB handles the script well.
-    """
     if not text or len(text.strip()) == 0:
         return ""
 
-    # Prepare the input
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    try:
+        # Prepare the input
+        inputs = tokenizer(text, return_tensors="pt")
 
-    # Generate translation
-    with torch.no_grad():
-        translated_tokens = model.generate(
-            **inputs, 
-            forced_bos_token_id=tokenizer.lang_code_to_id[target_lang], 
-            max_length=500
-        )
+        # GENERATION FIX: Using the target lang code correctly
+        # We manually set the target language ID
+        forced_bos_token_id = tokenizer.convert_tokens_to_ids(target_lang)
 
-    # Decode the output
-    result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
-    return result
+        with torch.no_grad():
+            translated_tokens = model.generate(
+                **inputs, 
+                forced_bos_token_id=forced_bos_token_id, 
+                max_length=500
+            )
+
+        result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+        return result
+    except Exception as e:
+        return f"Translation Logic Error: {str(e)}"
