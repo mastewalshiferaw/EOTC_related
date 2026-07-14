@@ -2,7 +2,7 @@ import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 import os
-
+import re
 
 def extract_geez_from_image(image_path):
     """
@@ -35,3 +35,9 @@ def extract_text_from_any_file(file_path):
         # It's an image
         return extract_geez_from_image(file_path)
     
+
+
+def clean_geez_text(text):
+    # Remove weird OCR artifacts but keep Ge'ez characters and punctuation
+    cleaned = re.sub(r'[^\u1200-\u137F\s፡።፣፤፥፦፧፨]', '', text)
+    return cleaned.strip()
