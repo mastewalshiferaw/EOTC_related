@@ -1,34 +1,56 @@
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-import torch
+import os
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# Load model and tokenizer
-# 'distilled-600M' is a good balance between speed and accuracy
-MODEL_NAME = "facebook/nllb-200-distilled-600M"
 
-print("Loading Translation Model... This may take a minute on first run.")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
+load_dotenv()
+
+
+api_key = os.getenv("GEMINI_API_KEY")
+
+
+if api_key:
+    genai.configure(api_key=api_key)
+else:
+    print("WARNING: GEMINI_API_KEY not found in environment variables!")
 
 def translate_text(text, target_lang="amh_Ethi"):
+    """
+    Translates Ge'ez text using Google Gemini 1.5 Flash.
+    """
     if not text or len(text.strip()) == 0:
         return ""
 
+    # Mapping frontend codes to human-readable names
+    lang_map = {
+        "amh_Ethi": "Amharic",
+        "eng_Latn": "English"
+    }
+    target = lang_map.get(target_lang, "Amharic")
+
     try:
-        # Prepare the input
-        inputs = tokenizer(text, return_tensors="pt")
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        You are an expert linguist specializing in Ancient Ge'ez (Ethiopic). 
+        Translate the following Ge'ez text into clear, accurate {target}. 
+        
+        If the text is liturgical (EOTC), biblical, or prayer-based, 
+        maintain the traditional sacred tone and poetic flow. 
+        If there are multiple possible interpretations, provide the most accepted one.
 
-        # GENERATION FIX: Using the target lang code correctly
-        # We manually set the target language ID
-        forced_bos_token_id = tokenizer.convert_tokens_to_ids(target_lang)
-
-        with torch.no_grad():
-            translated_tokens = model.generate(
-                **inputs, 
-                forced_bos_token_id=forced_bos_token_id, 
-                max_length=500
-            )
-
-        result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
-        return result
+        Ge'ez Text:
+        {text}
+        
+        Translation:
+        """
+        
+        response = model.generate_content(prompt)
+        
+        if response.text:
+            return response.text.strip()
+        else:
+            return "AI Error: Received an empty response."
+            
     except Exception as e:
-        return f"Translation Logic Error: {str(e)}"
+        return f"Gemini API Error: {str(e)}"

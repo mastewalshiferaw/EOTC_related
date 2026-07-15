@@ -25,6 +25,9 @@ media/
 backend/media/
 staticfiles/
 backend/staticfiles/
+.env
+backend/.env
+
 
 # Environment variables
 .env
