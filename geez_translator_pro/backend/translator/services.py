@@ -4,40 +4,28 @@ from pdf2image import convert_from_path
 import os
 import re
 
-def extract_geez_from_image(image_path):
-    """
-    it will read our image and it will returns the extracted Ethiopic text
-    (not a copy from AI...I am just trying to understand the code)
-    """
-    try:
-        custom_config = r'--oem 3 --psm 3' 
-        text = pytesseract.image_to_string(Image.open(image_path), lang='amh', config=custom_config)
-        return text.strip()
-    except Exception as e:
-        return f"Error during OCR: {str(e)}"
-   
-
-
+def clean_geez_text(text):
+    """Removes OCR noise but preserves Ge'ez script and punctuation."""
+    # Keeps Ethiopic range (1200-137F) and Ethiopic punctuation
+    cleaned = re.sub(r'[^\u1200-\u137F\s፡።፣፤፥፦፧፨]', '', text)
+    return " ".join(cleaned.split())
 
 def extract_text_from_any_file(file_path):
+    """Detects file type and extracts Ge'ez text."""
     ext = os.path.splitext(file_path)[1].lower()
     
-    if ext == '.pdf':
-        # Convert PDF pages to images
-        pages = convert_from_path(file_path)
-        full_text = ""
-        for page in pages:
-            # Run OCR on each page
-            text = pytesseract.image_to_string(page, lang='amh')
-            full_text += text + "\n\n"
-        return full_text
-    else:
-        # It's an image
-        return extract_geez_from_image(file_path)
-    
-
-
-def clean_geez_text(text):
-    # Remove weird OCR artifacts but keep Ge'ez characters and punctuation
-    cleaned = re.sub(r'[^\u1200-\u137F\s፡።፣፤፥፦፧፨]', '', text)
-    return cleaned.strip()
+    try:
+        if ext == '.pdf':
+            # Convert PDF to images (requires poppler installed on OS)
+            pages = convert_from_path(file_path)
+            full_text = ""
+            for page in pages:
+                text = pytesseract.image_to_string(page, lang='amh')
+                full_text += text + "\n"
+            return clean_geez_text(full_text)
+        else:
+            # Standard Image OCR
+            text = pytesseract.image_to_string(Image.open(file_path), lang='amh')
+            return clean_geez_text(text)
+    except Exception as e:
+        return f"OCR Error: {str(e)}"
