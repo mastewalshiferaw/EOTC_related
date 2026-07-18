@@ -4,6 +4,12 @@ import re
 from google.cloud import vision
 from PIL import Image, ImageOps, ImageEnhance
 
+from dotenv import load_dotenv
+load_dotenv()
+
+# This line is the fix:
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+
 # Make sure you have your Google Cloud JSON key path here
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path/to/your/service-account-file.json"
 
