@@ -1,31 +1,41 @@
-import pytesseract
-from PIL import Image
-from pdf2image import convert_from_path
 import os
+import io
 import re
+from google.cloud import vision
+from PIL import Image, ImageOps, ImageEnhance
+
+# Make sure you have your Google Cloud JSON key path here
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path/to/your/service-account-file.json"
 
 def clean_geez_text(text):
-    """Removes OCR noise but preserves Ge'ez script and punctuation."""
-    # Keeps Ethiopic range (1200-137F) and Ethiopic punctuation
     cleaned = re.sub(r'[^\u1200-\u137F\s፡።፣፤፥፦፧፨]', '', text)
     return " ".join(cleaned.split())
 
-def extract_text_from_any_file(file_path):
-    """Detects file type and extracts Ge'ez text."""
-    ext = os.path.splitext(file_path)[1].lower()
-    
+def perform_top_tier_ocr(image_bytes):
+    """
+    Uses Google Cloud Vision for high-accuracy Ethiopic OCR.
+    """
     try:
-        if ext == '.pdf':
-            # Convert PDF to images (requires poppler installed on OS)
-            pages = convert_from_path(file_path)
-            full_text = ""
-            for page in pages:
-                text = pytesseract.image_to_string(page, lang='amh')
-                full_text += text + "\n"
-            return clean_geez_text(full_text)
-        else:
-            # Standard Image OCR
-            text = pytesseract.image_to_string(Image.open(file_path), lang='amh')
-            return clean_geez_text(text)
+        # Preprocessing: Convert to Grayscale and increase contrast
+        img = Image.open(io.BytesIO(image_bytes))
+        img = ImageOps.grayscale(img)
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(2.0)
+        
+        # Save back to bytes
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG')
+        processed_bytes = img_byte_arr.getvalue()
+
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image(content=processed_bytes)
+        
+        # Use DOCUMENT_TEXT_DETECTION for manuscripts
+        response = client.document_text_detection(image=image)
+        
+        if response.error.message:
+            return f"OCR Error: {response.error.message}"
+            
+        return clean_geez_text(response.full_text_annotation.text)
     except Exception as e:
-        return f"OCR Error: {str(e)}"
+        return f"System Error: {str(e)}"

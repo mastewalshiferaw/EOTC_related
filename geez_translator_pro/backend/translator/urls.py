@@ -1,9 +1,7 @@
 from django.urls import path
-from .views import DocumentUploadView, DirectTranslateView
+from .views import OCROnlyView, TranslateDualView
+
 urlpatterns = [
-    path('upload/', DocumentUploadView.as_view(), name='document-upload'),
-     path('translate-text/', DirectTranslateView.as_view(), name='direct-translate'),
+    path('ocr-only/', OCROnlyView.as_view()),
+    path('translate-dual/', TranslateDualView.as_view()),
 ]
-
-
-

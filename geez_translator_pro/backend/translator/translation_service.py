@@ -1,56 +1,40 @@
 import os
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
-
 load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-
-api_key = os.getenv("GEMINI_API_KEY")
-
-
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    print("WARNING: GEMINI_API_KEY not found in environment variables!")
-
-def translate_text(text, target_lang="amh_Ethi"):
+def translate_dual(text):
     """
-    Translates Ge'ez text using Google Gemini 1.5 Flash.
+    Returns a dictionary with both Amharic and English translations.
     """
-    if not text or len(text.strip()) == 0:
-        return ""
+    if not text: return {"amharic": "", "english": ""}
 
-    # Mapping frontend codes to human-readable names
-    lang_map = {
-        "amh_Ethi": "Amharic",
-        "eng_Latn": "English"
-    }
-    target = lang_map.get(target_lang, "Amharic")
+    prompt = f"""
+    You are an expert linguist in Ancient Ge'ez. 
+    Translate the following Ge'ez text into TWO languages: Amharic and English.
+    
+    Maintain a sacred, liturgical tone for both.
+    Return the response in this EXACT format:
+    AMHARIC: [translation]
+    ENGLISH: [translation]
+
+    Ge'ez Text:
+    {text}
+    """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
+        raw_text = response.text
         
-        prompt = f"""
-        You are an expert linguist specializing in Ancient Ge'ez (Ethiopic). 
-        Translate the following Ge'ez text into clear, accurate {target}. 
+        # Simple parsing logic
+        amh = raw_text.split("AMHARIC:")[1].split("ENGLISH:")[0].strip()
+        eng = raw_text.split("ENGLISH:")[1].strip()
         
-        If the text is liturgical (EOTC), biblical, or prayer-based, 
-        maintain the traditional sacred tone and poetic flow. 
-        If there are multiple possible interpretations, provide the most accepted one.
-
-        Ge'ez Text:
-        {text}
-        
-        Translation:
-        """
-        
-        response = model.generate_content(prompt)
-        
-        if response.text:
-            return response.text.strip()
-        else:
-            return "AI Error: Received an empty response."
-            
+        return {"amharic": amh, "english": eng}
     except Exception as e:
-        return f"Gemini API Error: {str(e)}"
+        return {"amharic": f"Error: {str(e)}", "english": "Error"}
