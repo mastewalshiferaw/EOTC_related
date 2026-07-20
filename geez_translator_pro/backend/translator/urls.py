@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OCROnlyView, TranslateDualView
+from .views import OCROnlyView, TranslateFlexibleView
 
 urlpatterns = [
     path('ocr-only/', OCROnlyView.as_view()),

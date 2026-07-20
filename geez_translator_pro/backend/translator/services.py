@@ -1,47 +1,35 @@
 import os
 import io
-import re
 from google.cloud import vision
-from PIL import Image, ImageOps, ImageEnhance
-
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
 
-# This line is the fix:
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
-
-# Make sure you have your Google Cloud JSON key path here
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path/to/your/service-account-file.json"
-
-def clean_geez_text(text):
-    cleaned = re.sub(r'[^\u1200-\u137F\s፡።፣፤፥፦፧፨]', '', text)
-    return " ".join(cleaned.split())
+# Load .env from the backend folder
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 def perform_top_tier_ocr(image_bytes):
-    """
-    Uses Google Cloud Vision for high-accuracy Ethiopic OCR.
-    """
-    try:
-        # Preprocessing: Convert to Grayscale and increase contrast
-        img = Image.open(io.BytesIO(image_bytes))
-        img = ImageOps.grayscale(img)
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(2.0)
-        
-        # Save back to bytes
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='JPEG')
-        processed_bytes = img_byte_arr.getvalue()
+    # GET THE JSON FILENAME FROM .ENV
+    cred_file = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    
+    # BUILD THE ABSOLUTE PATH (Point to the backend folder)
+    base_dir = Path(__file__).resolve().parent.parent
+    cred_path = base_dir / cred_file
 
+    # CHECK IF FILE EXISTS BEFORE RUNNING
+    if not cred_path.exists():
+        return f"System Error: Credentials file not found at {cred_path}"
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(cred_path)
+
+    try:
         client = vision.ImageAnnotatorClient()
-        image = vision.Image(content=processed_bytes)
-        
-        # Use DOCUMENT_TEXT_DETECTION for manuscripts
+        image = vision.Image(content=image_bytes)
         response = client.document_text_detection(image=image)
         
         if response.error.message:
-            return f"OCR Error: {response.error.message}"
+            return f"Google Error: {response.error.message}"
             
-        return clean_geez_text(response.full_text_annotation.text)
+        return response.full_text_annotation.text.strip()
     except Exception as e:
-        return f"System Error: {str(e)}"
+        return f"OCR System Error: {str(e)}"
