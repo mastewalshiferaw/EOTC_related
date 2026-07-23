@@ -1,19 +1,21 @@
-import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Gez.AI Studio',
-  description: 'Ecclesiastical Ge\'ez Translation Workspace',
-}
+  title: "Gez.AI Studio",
+  description: "Advanced Ge'ez Philology & Translation Workspace",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        {children}
+      </body>
     </html>
-  )
+  );
 }
