@@ -3,39 +3,27 @@ from google import genai
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load env from backend root
+# Absolute path loading to prevent "File Not Found"
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env')
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-def translate_flexible(text, source_lang="Ge'ez", target_lang="Amharic"):
-    """
-    High-stability translation using Gemini 1.5 Flash.
-    """
-    if not text:
-        return ""
-
-    try:
-        # 1.5 Flash is highly stable for the free tier
-        model_id = "gemini-1.5-flash"
-
-        prompt = f"""
-        You are a scholar of Ethiopic studies. 
-        Translate this text from {source_lang} to {target_lang}.
-        Maintain a formal, liturgical tone.
-
-        Text: {text}
-        """
-
-        response = client.models.generate_content(
-            model=model_id,
-            contents=prompt
-        )
-        
-        return response.text.strip() if response.text else "AI Error: Empty response."
-
-    except Exception as e:
-        if "429" in str(e):
-            return "Error: Quota exceeded. Please wait 30 seconds."
-        return f"Translation Error: {str(e)}"
+def translate_flexible(text, source, target):
+    if not text: return ""
+    
+    # Rational Prompt
+    prompt = f"Expert Translation. Source ({source}): {text}. Target: {target}. Tone: Scholarly/Liturgical."
+    
+    # Try models in order of stability
+    models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-pro"]
+    
+    for model_id in models_to_try:
+        try:
+            response = client.models.generate_content(model=model_id, contents=prompt)
+            if response.text:
+                return response.text.strip()
+        except Exception:
+            continue # Try next model if this one 404s
+            
+    return "Error: All AI models failed. Check your API key at aistudio.google.com"
