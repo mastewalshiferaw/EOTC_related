@@ -1,7 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* Minimalist setup for our Ge'ez app */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,5 +11,4 @@ body {
   background: var(--background);
   margin: 0;
   padding: 0;
-  font-family: Arial, Helvetica, sans-serif;
 }
