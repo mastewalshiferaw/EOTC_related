@@ -2,14 +2,14 @@
 import { useState, ClipboardEvent } from 'react';
 import axios from 'axios';
 
-export default function GezStudio() {
+export default function MasGeezTranslator() {
   const [isDark, setIsDark] = useState(true);
   const [inputText, setInputText] = useState("");
-  const [amhText, setAmhText] = useState("");
-  const [engText, setEngText] = useState("");
+  const [outputText, setOutputText] = useState("");
+  const [sourceLang, setSourceLang] = useState("Ge'ez");
+  const [targetLang, setTargetLang] = useState("Amharic");
   const [loading, setLoading] = useState(false);
 
-  // 1. Paste Image Logic
   const handlePaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
@@ -23,71 +23,87 @@ export default function GezStudio() {
           const res = await axios.post('http://127.0.0.1:8000/api/ocr-only/', formData);
           setInputText((prev) => prev + " " + res.data.text);
         } catch (err) {
-          alert("OCR Failed. Check Google Cloud JSON key.");
+          alert("OCR Failed.");
         } finally { setLoading(false); }
       }
     }
   };
 
-  // 2. Dual Translation Logic
   const handleTranslate = async () => {
     if (!inputText) return;
     setLoading(true);
     try {
-      const resAmh = await axios.post('http://127.0.0.1:8000/api/translate-flexible/', {
-        text: inputText, source: "Ge'ez", target: "Amharic"
+      const res = await axios.post('http://127.0.0.1:8000/api/translate-flexible/', {
+        text: inputText,
+        source: sourceLang,
+        target: targetLang
       });
-      const resEng = await axios.post('http://127.0.0.1:8000/api/translate-flexible/', {
-        text: inputText, source: "Ge'ez", target: "English"
-      });
-      setAmhText(resAmh.data.translation);
-      setEngText(resEng.data.translation);
+      setOutputText(res.data.translation);
     } catch (err) {
-      alert("AI Error. Check Backend.");
+      alert("Translation Failed");
     } finally { setLoading(false); }
   };
 
-  const theme = isDark ? 'bg-zinc-950 text-zinc-300 border-zinc-800' : 'bg-zinc-50 text-zinc-800 border-zinc-200';
+  const theme = isDark ? 'bg-[#0a0a0a] text-zinc-400' : 'bg-zinc-50 text-zinc-600';
 
   return (
-    <div className={`min-h-screen p-4 md:p-12 transition-all duration-700 ${theme}`}>
-      <nav className="max-w-5xl mx-auto flex justify-between items-center mb-12">
-        <h1 className="font-serif italic text-2xl tracking-tighter font-black uppercase">Gez.AI</h1>
-        <button onClick={() => setIsDark(!isDark)} className="text-[10px] font-bold uppercase tracking-widest border px-3 py-1 rounded-full opacity-50 hover:opacity-100">
-          {isDark ? 'Light Mode' : 'Dark Mode'}
+    <div className={`min-h-screen transition-colors duration-500 font-sans ${theme}`}>
+      <nav className="max-w-5xl mx-auto p-6 flex justify-between items-center border-b border-zinc-900/10">
+        <div className="flex items-center gap-2">
+            <span className={`font-black text-2xl tracking-tighter uppercase italic ${isDark ? 'text-white' : 'text-black'}`}>MAS_GEEZ</span>
+            <span className="text-[9px] border border-zinc-800 px-2 py-0.5 rounded text-zinc-500 uppercase font-bold tracking-widest">Translator</span>
+        </div>
+        <button onClick={() => setIsDark(!isDark)} className="text-[10px] font-bold uppercase tracking-widest opacity-30 hover:opacity-100">
+          {isDark ? 'Light' : 'Dark'}
         </button>
       </nav>
 
-      <main className="max-w-5xl mx-auto space-y-6">
-        {/* Unified Input */}
-        <div className={`rounded-3xl border p-2 transition-all ${isDark ? 'bg-zinc-900' : 'bg-white shadow-xl'}`}>
-          <textarea 
-            onPaste={handlePaste}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            className="w-full h-48 p-6 bg-transparent outline-none resize-none text-2xl font-serif placeholder:opacity-20"
-            placeholder="Type or Paste Image..."
-          />
-          <div className="flex justify-between items-center p-4">
-            <span className="text-[9px] uppercase tracking-widest opacity-30 italic">{loading ? 'AI Processing...' : 'Ready'}</span>
-            <button onClick={handleTranslate} className={`px-10 py-3 rounded-2xl font-bold uppercase text-xs tracking-widest transition-all ${isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
-              Translate
-            </button>
-          </div>
+      <main className="max-w-5xl mx-auto p-6 lg:p-12">
+        <div className="flex items-center gap-4 mb-8">
+          <select value={sourceLang} onChange={(e) => setSourceLang(e.target.value)} className="bg-transparent border-none outline-none font-bold text-xs uppercase tracking-widest cursor-pointer">
+            <option value="Ge'ez">Ge'ez</option>
+            <option value="Amharic">Amharic</option>
+            <option value="English">English</option>
+          </select>
+          <span className="opacity-20 text-xs">→</span>
+          <select value={targetLang} onChange={(e) => setTargetLang(e.target.value)} className="bg-transparent border-none outline-none font-bold text-xs uppercase tracking-widest cursor-pointer">
+            <option value="Amharic">Amharic</option>
+            <option value="English">English</option>
+            <option value="Ge'ez">Ge'ez</option>
+          </select>
         </div>
 
-        {/* Results */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className={`p-8 rounded-3xl border ${isDark ? 'bg-zinc-900/50' : 'bg-white shadow-lg'}`}>
-            <label className="text-[9px] font-black uppercase opacity-20 block mb-4">Amharic</label>
-            <p className="text-xl font-serif leading-relaxed">{amhText || '...'}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-zinc-800/20 border border-zinc-800/20 rounded-3xl overflow-hidden shadow-2xl">
+          <div className={`p-8 min-h-[450px] flex flex-col ${isDark ? 'bg-zinc-900/40' : 'bg-white'}`}>
+            <textarea 
+              onPaste={handlePaste}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              className="flex-1 bg-transparent border-none outline-none resize-none text-2xl font-serif leading-relaxed placeholder:opacity-20"
+              placeholder="Paste image or type..."
+            />
+            <div className="mt-6 flex justify-between items-center">
+                <p className="text-[9px] uppercase tracking-widest opacity-20 font-bold">{loading ? "Analyzing..." : "Ready"}</p>
+                <button onClick={handleTranslate} className={`px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition ${isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
+                  Translate
+                </button>
+            </div>
           </div>
-          <div className={`p-8 rounded-3xl border ${isDark ? 'bg-zinc-900/50' : 'bg-white shadow-lg'}`}>
-            <label className="text-[9px] font-black uppercase opacity-20 block mb-4">English</label>
-            <p className="text-lg leading-relaxed italic opacity-80">{engText || '...'}</p>
+
+          <div className={`p-8 min-h-[450px] flex flex-col ${isDark ? 'bg-[#050505]' : 'bg-zinc-100/50'}`}>
+             <div className="flex-1 text-2xl font-serif leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-zinc-500">
+                {outputText || <span className="opacity-5 italic">Meaning...</span>}
+             </div>
+             <button onClick={() => {navigator.clipboard.writeText(outputText); alert("Copied!")}} className="self-end text-[9px] font-bold uppercase tracking-widest opacity-20 hover:opacity-100">
+               Copy Result
+             </button>
           </div>
         </div>
       </main>
+
+      <footer className="fixed bottom-6 w-full text-center text-[9px] uppercase tracking-[0.5em] opacity-10">
+        MAS_GEEZ Digital Philology
+      </footer>
     </div>
   );
 }

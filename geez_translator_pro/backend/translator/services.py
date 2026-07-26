@@ -1,43 +1,38 @@
 import os
 import io
-from google.cloud import vision
-from pathlib import Path
+from google import genai
 from dotenv import load_dotenv
+from pathlib import Path
+from PIL import Image
 
-# Setup paths relative to this file
-# This finds the 'backend' folder
-BASE_DIR = Path(__file__).resolve().parent.parent 
+# Absolute path loading
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env')
 
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 def perform_top_tier_ocr(image_bytes):
-    """
-    Uses Google Cloud Vision to extract Ge'ez text from images/pastes.
-    """
-    # Securely located the credentials file
-    cred_filename = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not cred_filename:
-        return "System Error: GOOGLE_APPLICATION_CREDENTIALS not set in .env"
-        
-    cred_path = BASE_DIR / cred_filename
-
-    if not cred_path.exists():
-        return f"System Error: JSON key not found at {cred_path}"
-
-    # setted environment variable for this session
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(cred_path)
-
     try:
-        client = vision.ImageAnnotatorClient()
-        image = vision.Image(content=image_bytes)
+        # Load the image
+        img = Image.open(io.BytesIO(image_bytes))
         
-        # Using DOCUMENT_TEXT_DETECTION for better manuscript handling
-        response = client.document_text_detection(image=image)
-        
-        if response.error.message:
-            return f"Google Cloud Error: {response.error.message}"
-            
-        text = response.full_text_annotation.text
-        return text.strip() if text else "No text detected in image."
+        prompt = "Extract all Ge'ez (Ethiopic) text from this image. Output ONLY the text found."
 
+        # USE THE EXACT MODEL FROM YOUR LIST
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[prompt, img]
+        )
+        
+        if response.text:
+            return response.text.strip()
+        else:
+            return "No text detected."
+            
     except Exception as e:
-        return f"OCR System Error: {str(e)}"
+        # If 2.0 fails, try the absolute 'latest' alias
+        try:
+            response = client.models.generate_content(model="gemini-flash-latest", contents=[prompt, img])
+            return response.text.strip()
+        except:
+            return f"Gemini Vision Error: {str(e)}"
