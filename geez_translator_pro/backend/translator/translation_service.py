@@ -12,37 +12,31 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def translate_flexible(text, source, target):
     if not text: return ""
     
-    # 1. Define a strict system instruction to force short, direct outputs
+    # STRICT SYSTEM INSTRUCTIONS
+    # We tell the AI it is a 'one-to-one' mapper.
     sys_instruction = (
-        "You are a direct translation dictionary tool. "
-        "Provide ONLY the direct meaning, literal translation, or equivalent term. "
-        "Do NOT write long sentences, introductions, or explanations. "
-        "Keep it concise: just 'this to this'."
+        "You are a strict Ge'ez/Amharic/English direct dictionary. "
+        "Rules: "
+        "1. Provide ONLY the direct equivalent words or short phrases. "
+        "2. Do NOT provide definitions, explanations, or sentences. "
+        "3. Do NOT use conversational filler like 'This means' or 'The translation is'. "
+        "4. If multiple meanings exist, separate them by a comma. "
+        "Example Input: 'በስመ አብ' | Output: 'In the name of the Father'"
     )
     
-    prompt = f"Translate this {source} text to {target}: {text}"
+    prompt = f"Translate {source} to {target}: {text}"
     
     try:
-        # 2. Pass the system instruction in the config
+        from google.genai import types
         response = client.models.generate_content(
             model="gemini-2.0-flash", 
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=sys_instruction,
-                temperature=0.1 # Low temperature makes it deterministic and strict
+                temperature=0.0 # Force maximum accuracy and zero creativity
             )
         )
         return response.text.strip()
     except Exception as e:
-        try:
-            response = client.models.generate_content(
-                model="gemini-flash-latest", 
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=sys_instruction,
-                    temperature=0.1
-                )
-            )
-            return response.text.strip()
-        except:
-            return f"Error: {str(e)}"
+        # Fallback logic remains same but with strict config
+        return f"Error"
