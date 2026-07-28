@@ -1,9 +1,9 @@
 import os
 from google import genai
-from google.genai import types # Import types for configuration
 from dotenv import load_dotenv
 from pathlib import Path
 
+# Load env
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env')
 
@@ -12,31 +12,33 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def translate_flexible(text, source, target):
     if not text: return ""
     
-    # STRICT SYSTEM INSTRUCTIONS
-    # We tell the AI it is a 'one-to-one' mapper.
-    sys_instruction = (
-        "You are a strict Ge'ez/Amharic/English direct dictionary. "
-        "Rules: "
-        "1. Provide ONLY the direct equivalent words or short phrases. "
-        "2. Do NOT provide definitions, explanations, or sentences. "
-        "3. Do NOT use conversational filler like 'This means' or 'The translation is'. "
-        "4. If multiple meanings exist, separate them by a comma. "
-        "Example Input: 'በስመ አብ' | Output: 'In the name of the Father'"
-    )
+    # We put the "Strict Dictionary" rules directly in the prompt
+    # This avoids the 'types' configuration errors
+    prompt = f"""
+    TASK: Direct Dictionary Translation.
+    RULES: 
+    - Translate from {source} to {target}.
+    - Provide ONLY the direct equivalent words.
+    - NO sentences, NO explanations, NO 'The meaning is'.
+    - Output ONLY the result.
     
-    prompt = f"Translate {source} to {target}: {text}"
+    TEXT: {text}
+    RESULT:
+    """
     
-    try:
-        from google.genai import types
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", 
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=sys_instruction,
-                temperature=0.0 # Force maximum accuracy and zero creativity
+    # We try your confirmed 2.0 model first, then fallback to the latest alias
+    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+    
+    for model_id in models:
+        try:
+            response = client.models.generate_content(
+                model=model_id, 
+                contents=prompt
             )
-        )
-        return response.text.strip()
-    except Exception as e:
-        # Fallback logic remains same but with strict config
-        return f"Error"
+            if response.text:
+                return response.text.strip()
+        except Exception as e:
+            print(f"Model {model_id} failed: {e}")
+            continue
+            
+    return "Error: Translation failed. Please try again in 10 seconds."
