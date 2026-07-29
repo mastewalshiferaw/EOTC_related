@@ -13,3 +13,20 @@ class GezDocument(models.Model):
 
     def __str__(self):
         return f"Doc {self.id} - {self.uploaded_at}"
+
+
+
+class TranslationCache(models.Model):
+    # We store the hash of the text to make lookups very fast
+    source_text = models.TextField()
+    source_lang = models.CharField(max_length=50)
+    target_lang = models.CharField(max_length=50)
+    translated_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Prevent duplicate entries for the same translation
+        unique_together = ('source_text', 'source_lang', 'target_lang')
+
+    def __str__(self):
+        return f"{self.source_lang} -> {self.target_lang}: {self.source_text[:20]}..."
