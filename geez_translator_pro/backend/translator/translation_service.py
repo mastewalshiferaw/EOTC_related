@@ -2,8 +2,8 @@ import os
 from google import genai
 from dotenv import load_dotenv
 from pathlib import Path
+from .models import TranslationCache
 
-# Load env
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env')
 
@@ -11,34 +11,38 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def translate_flexible(text, source, target):
     if not text: return ""
+
+    # PORTFOLIO FEATURE: Intelligent Caching Layer
+    # Check if we have translated this before
+    cached_hit = TranslationCache.objects.filter(
+        source_text=text.strip(),
+        source_lang=source,
+        target_lang=target
+    ).first()
+
+    if cached_hit:
+        print(f"Cache Hit: Returning saved translation for '{text[:10]}...'")
+        return cached_hit.translated_text
+
+    # If not in cache, call the AI
+    print(f"Cache Miss: Calling Gemini API for '{text[:10]}...'")
+    prompt = f"Direct Dictionary Translation. Source ({source}): {text}. Target: {target}. Rules: No sentences, no explanations, only the equivalent result."
     
-    # We put the "Strict Dictionary" rules directly in the prompt
-    # This avoids the 'types' configuration errors
-    prompt = f"""
-    TASK: Direct Dictionary Translation.
-    RULES: 
-    - Translate from {source} to {target}.
-    - Provide ONLY the direct equivalent words.
-    - NO sentences, NO explanations, NO 'The meaning is'.
-    - Output ONLY the result.
-    
-    TEXT: {text}
-    RESULT:
-    """
-    
-    # We try your confirmed 2.0 model first, then fallback to the latest alias
-    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
-    
-    for model_id in models:
-        try:
-            response = client.models.generate_content(
-                model=model_id, 
-                contents=prompt
-            )
-            if response.text:
-                return response.text.strip()
-        except Exception as e:
-            print(f"Model {model_id} failed: {e}")
-            continue
-            
-    return "Error: Translation failed. Please try again in 10 seconds."
+    try:
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        translated_result = response.text.strip()
+
+        # Save to cache for next time
+        TranslationCache.objects.create(
+            source_text=text.strip(),
+            source_lang=source,
+            target_lang=target,
+            translated_text=translated_result
+        )
+
+        return translated_result
+    except Exception as e:
+        return f"AI Error: {str(e)}"
