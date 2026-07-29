@@ -1,18 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from .services import perform_top_tier_ocr
+from .services import perform_hybrid_ocr
 from .translation_service import translate_flexible
 
 class OCROnlyView(APIView):
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
-            return Response({"text": "System Error: No file received"}, status=400)
+            return Response({"text": "No file received"}, status=400)
         
-        # Read file bytes and send to Google Vision
-        extracted_text = perform_top_tier_ocr(file.read())
-        return Response({"text": extracted_text})
+        # Now using the Hybrid OCR logic
+        text = perform_hybrid_ocr(file.read())
+        return Response({"text": text})
 
 class TranslateFlexibleView(APIView):
     def post(self, request):
@@ -20,8 +19,6 @@ class TranslateFlexibleView(APIView):
         source = request.data.get('source', "Ge'ez")
         target = request.data.get('target', "Amharic")
         
-        if not text:
-            return Response({"translation": "No text provided"}, status=400)
-            
-        result = translate_flexible(text, source, target)
-        return Response({"translation": result})
+        # Now using the Cached Translation logic
+        translation = translate_flexible(text, source, target)
+        return Response({"translation": translation})

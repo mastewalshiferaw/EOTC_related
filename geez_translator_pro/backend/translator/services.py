@@ -21,7 +21,6 @@ def perform_hybrid_ocr(image_bytes):
         img = Image.open(io.BytesIO(image_bytes))
         
         # Step 1: Try Local Tesseract
-        # Note: Requires Tesseract installed on OS with 'amh' data
         local_text = pytesseract.image_to_string(img, lang='amh').strip()
         
         # If Tesseract did a good job (found more than 10 characters), return it
