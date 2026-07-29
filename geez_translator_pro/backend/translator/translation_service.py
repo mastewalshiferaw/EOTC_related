@@ -12,7 +12,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def translate_flexible(text, source, target):
     if not text: return ""
 
-    # PORTFOLIO FEATURE: Intelligent Caching Layer
+    
     # Check if we have translated this before
     cached_hit = TranslationCache.objects.filter(
         source_text=text.strip(),
