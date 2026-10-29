@@ -36,7 +36,7 @@ def get_gemini_client():
 
 def preprocess_image_bytes(image_bytes, is_ethiopic=True):
     """
-    Blazing Fast & Accurate Image Preprocessor (~0.05s):
+    Fast & Accurate Image Preprocessor (~0.05s):
     1. Red-Ink Equalization: Extracts min(G, B) channels to ensure red liturgical ink
        (ቀይ ቀለም / rubrics) is as dark and legible as black ink on parchment.
     2. Quiet-Zone Auto-Padding: Adds a clean 40px white border so Tesseract never clips
@@ -57,7 +57,7 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
         # 40px white quiet-zone padding to stabilize Tesseract line/word segmentation on cropped boxes
         padded = cv2.copyMakeBorder(blended, 40, 40, 40, 40, cv2.BORDER_CONSTANT, value=255)
 
-        # Scale to optimal height (~1200px) with fast linear/cubic scaling
+        # Scale to optimal height (~1200px) with cubic interpolation
         h, w = padded.shape
         if max(h, w) < 1200:
             scale = 1200.0 / max(h, w)
@@ -82,9 +82,9 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
 
 def restore_fidel_ocr_text(raw_text, provider=None):
     """
-    Intelligent Post-OCR Reconstruction Layer:
+    High-Speed Post-OCR Formatting & Reconstruction Layer:
     Corrects optical character misrecognitions (e.g. ዶ->ይ, ቪ->ዚ, 'ቡ->አቡ, broken punctuation)
-    using dual-provider LLM intelligence (Gemini / Groq), preserving authentic canonical Fidel.
+    and formats raw OCR into clean, authentic canonical Fidel using high-speed LLM inference.
     """
     if not raw_text or len(raw_text.strip()) < 8:
         return raw_text
@@ -92,29 +92,15 @@ def restore_fidel_ocr_text(raw_text, provider=None):
     preferred = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     prompt = (
-        "You are an expert scholar in Classical Ge'ez (ግዕዝ) and Ethiopian Orthodox Tewahedo liturgy. "
-        "The text below was produced by an OCR engine from a liturgical text (e.g. ጸሎት ዘዘወትር / መጽሐፈ ጸሎት) "
-        "and contains optical scanning errors (for example: 'ቡነ -> አቡነ, ዘበሰማያጎ -> ዘበሰማያት, ዘዘወጉር -> ዘዘወትር, "
-        "አስመ ቪአክ -> እስመ ዚአከ, corrupted letters and punctuation). "
-        "Please reconstruct and output the corrected, canonical Classical Ge'ez liturgical text. "
+        "You are an expert scholar in Classical Ge'ez (ግዕዝ) and Ethiopian Orthodox Tewahedo liturgical manuscripts. "
+        "The following text was extracted by optical OCR and contains optical scan errors "
+        "('ቡነ -> አቡነ, ዘበሰማያጎ -> ዘበሰማያት, ጸሎት ዘዘወጉር -> ጸሎት ዘዘወትር, አስመ ቪአክ -> እስመ ዚአከ, broken punctuation). "
+        "Please format and restore it into clean, canonical, authentic Classical Ge'ez text. "
         "Rules:\n"
-        "- Output ONLY the corrected Fidel text.\n"
-        "- Do NOT provide English translation or commentary.\n"
-        "- Do NOT add quotation marks or intro/outro text."
+        "- Output ONLY the clean restored Fidel text.\n"
+        "- Do NOT translate or explain.\n"
+        "- Preserve prayer lines and authentic Fidel punctuation (፡, ።, ፤)."
     )
-
-    def _call_gemini():
-        client = get_gemini_client()
-        if client:
-            model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-            response = client.models.generate_content(
-                model=model,
-                contents=f"{prompt}\n\n[RAW OCR TEXT]:\n{raw_text}"
-            )
-            if response.text and len(response.text.strip()) > 5:
-                print("Post-OCR Cleanup: Restored via Gemini")
-                return response.text.strip()
-        return None
 
     def _call_groq():
         from .translation_service import get_groq_client
@@ -128,51 +114,66 @@ def restore_fidel_ocr_text(raw_text, provider=None):
                     {"role": "user", "content": raw_text}
                 ],
                 temperature=0.1,
-                max_tokens=1000
+                max_tokens=600
             )
             content = resp.choices[0].message.content or ""
             if content.strip():
-                print("Post-OCR Cleanup: Restored via Groq")
+                print("OCR Formatter: Successfully formatted with Groq (Fast)")
                 return content.strip()
         return None
 
-    if preferred == "groq":
-        try:
-            res = _call_groq()
-            if res:
-                return res
-        except Exception as e:
-            print(f"Groq restoration error ({e}), attempting Gemini fallback...")
+    def _call_gemini():
+        client = get_gemini_client()
+        if client:
+            model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+            response = client.models.generate_content(
+                model=model,
+                contents=f"{prompt}\n\n[RAW OCR TEXT]:\n{raw_text}"
+            )
+            if response.text and len(response.text.strip()) > 5:
+                print("OCR Formatter: Successfully formatted with Gemini")
+                return response.text.strip()
+        return None
+
+    # For formatting, if Gemini is preferred, try Gemini; but failover instantly to Groq if 429/busy
+    if preferred == "gemini":
         try:
             res = _call_gemini()
             if res:
                 return res
+        except Exception as e:
+            print(f"Gemini formatting unavailable ({e}), instantly falling back to fast Groq...")
+        try:
+            res = _call_groq()
+            if res:
+                return res
         except Exception as e2:
-            print(f"Gemini restoration error: {e2}")
+            print(f"Groq formatting error: {e2}")
     else:
         try:
-            res = _call_gemini()
-            if res:
-                return res
-        except Exception as e:
-            print(f"Gemini restoration error ({e}), attempting Groq fallback...")
-        try:
             res = _call_groq()
             if res:
                 return res
+        except Exception as e:
+            print(f"Groq formatting error ({e}), attempting Gemini fallback...")
+        try:
+            res = _call_gemini()
+            if res:
+                return res
         except Exception as e2:
-            print(f"Groq restoration error: {e2}")
+            print(f"Gemini formatting error: {e2}")
 
+    # If both fail, return raw OCR text safely without crashing
     return raw_text
 
 
-def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=False):
+def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
     """
-    Ultra-Fast Hybrid OCR Pipeline (< 0.5s):
+    Intelligent Hybrid OCR Pipeline:
     1. Preprocesses image with Red-Ink Equalization and 40px Quiet-Zone Padding (~0.05s).
     2. Runs Local Tesseract OCR with --psm 6 (~0.4s).
-    3. If valid Fidel/Latin characters found: returns IMMEDIATELY so the user sees results without delay.
-    4. Optional auto_clean (if requested by user) or cloud Vision fallback if 0 text detected.
+    3. Formats & restores extracted Fidel text using the fast LLM formatter (~2-3s).
+    4. Falls back to Gemini Vision if local Tesseract detects 0 characters.
     """
     is_ethiopic = ("amh" in lang.lower() or "ge'ez" in lang.lower() or "geez" in lang.lower())
     tess_lang = "amh" if is_ethiopic else "eng"
@@ -194,36 +195,40 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=False)
                 if len(re.findall(r'[\u1200-\u137F]', alt_text)) > fidel_count:
                     local_text = alt_text
 
-        # Step 3: Check character count & return immediately (no blocking LLM delays)
+        # Step 3: Check character detection & run fast LLM formatting
         if is_ethiopic:
             fidel_count = len(re.findall(r'[\u1200-\u137F]', local_text))
             if fidel_count >= 5:
-                print(f"OCR Mode: Fast Local Tesseract (Extracted {fidel_count} Fidel characters in <0.5s)")
+                print(f"OCR Mode: Local Tesseract ({fidel_count} Fidel characters). Running Fast LLM Formatter...")
                 if auto_clean:
-                    return restore_fidel_ocr_text(local_text, provider=provider)
+                    formatted_text = restore_fidel_ocr_text(local_text, provider=provider)
+                    return formatted_text
                 return local_text
         else:
             latin_count = len(re.findall(r'[a-zA-Z]', local_text))
             if latin_count >= 8:
-                print(f"OCR Mode: Fast Local Tesseract (Extracted {latin_count} Latin characters in <0.5s)")
+                print(f"OCR Mode: Local Tesseract (Extracted {latin_count} Latin characters)")
                 return local_text
 
-        # Step 4: Cloud Vision Fallback only if local OCR found no text
+        # Step 4: Cloud Vision Fallback only if local OCR found 0 text
         print("OCR Mode: Cloud Fallback (Gemini Vision)")
-        client = get_gemini_client()
-        if client:
-            pil_img = Image.open(io.BytesIO(image_bytes))
-            target_script = "Ge'ez or Amharic" if is_ethiopic else "English"
-            prompt = (
-                f"Transcribe all text from this image exactly as written in {target_script}. "
-                "Output ONLY the transcribed raw text, without comments or formatting."
-            )
-            response = client.models.generate_content(
-                model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
-                contents=[prompt, pil_img]
-            )
-            if response.text and response.text.strip():
-                return response.text.strip()
+        try:
+            client = get_gemini_client()
+            if client:
+                pil_img = Image.open(io.BytesIO(image_bytes))
+                target_script = "Ge'ez or Amharic" if is_ethiopic else "English"
+                prompt = (
+                    f"Transcribe all text from this image exactly as written in {target_script}. "
+                    "Output ONLY the transcribed raw text, without comments or formatting."
+                )
+                response = client.models.generate_content(
+                    model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+                    contents=[prompt, pil_img]
+                )
+                if response.text and response.text.strip():
+                    return response.text.strip()
+        except Exception as vision_err:
+            print(f"Cloud Vision fallback bypassed ({vision_err})")
 
         return local_text if local_text else "No text detected."
 

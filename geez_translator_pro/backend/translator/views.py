@@ -13,7 +13,7 @@ class OCROnlyView(APIView):
         # Fast local OCR: returns in < 0.5s
         lang = request.data.get('lang', 'amh')
         provider = request.data.get('provider')
-        auto_clean = request.data.get('auto_clean', 'false').lower() == 'true'
+        auto_clean = request.data.get('auto_clean', 'true').lower() == 'true'
         
         text = perform_hybrid_ocr(file.read(), lang=lang, provider=provider, auto_clean=auto_clean)
         active_provider = provider or os.getenv("LLM_PROVIDER", "gemini")
