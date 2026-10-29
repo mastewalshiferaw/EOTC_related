@@ -96,6 +96,7 @@ export default function MasGeezTranslator() {
   const [sourceLang, setSourceLang] = useState("Ge'ez");
   const [targetLang, setTargetLang] = useState("Amharic");
   const [loading, setLoading] = useState(false);
+  const [polishing, setPolishing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [copied, setCopied] = useState(false);
 
@@ -106,7 +107,7 @@ export default function MasGeezTranslator() {
 
   const processImagePayload = async (fileOrBlob: File | Blob) => {
     setLoading(true);
-    setStatusMessage("Running Hybrid OCR...");
+    setStatusMessage("Extracting text...");
     const formData = new FormData();
     const filename = fileOrBlob instanceof File ? fileOrBlob.name : 'cropped-image.png';
     formData.append('file', fileOrBlob, filename);
@@ -117,12 +118,33 @@ export default function MasGeezTranslator() {
       const res = await axios.post(`${API_BASE}/api/ocr-only/`, formData);
       const extracted = res.data.text || "";
       setInputText((prev) => (prev ? prev + "\n" + extracted : extracted));
-      setStatusMessage(`Extracted (${provider})`);
+      setStatusMessage("Extracted");
     } catch (err: any) {
       console.error(err);
       setStatusMessage("OCR Failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePolishText = async () => {
+    if (!inputText.trim()) return;
+    setPolishing(true);
+    setStatusMessage(`Polishing (${provider})...`);
+    try {
+      const res = await axios.post(`${API_BASE}/api/clean-ocr/`, {
+        text: inputText,
+        provider: provider,
+      });
+      if (res.data.text) {
+        setInputText(res.data.text);
+        setStatusMessage("Polished!");
+      }
+    } catch (err) {
+      console.error(err);
+      setStatusMessage("Polish Failed");
+    } finally {
+      setPolishing(false);
     }
   };
 
@@ -348,6 +370,21 @@ export default function MasGeezTranslator() {
                   <UploadImageIcon className="w-3.5 h-3.5" />
                   <span>Upload</span>
                 </button>
+
+                {/* Optional Polish Button */}
+                {inputText.trim() && (
+                  <button
+                    type="button"
+                    onClick={handlePolishText}
+                    disabled={polishing || loading}
+                    className={`shrink-0 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border transition flex items-center gap-1.5 ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+                    title="Clean up and restore OCR typos with AI"
+                  >
+                    {polishing ? <SpinnerIcon className="w-3.5 h-3.5 text-amber-500" /> : <SparkleIcon className="w-3.5 h-3.5 text-amber-500" />}
+                    <span>{polishing ? "Polishing" : "Polish"}</span>
+                  </button>
+                )}
+
                 <div className="flex items-center gap-1 min-w-0">
                   {loading && <SpinnerIcon className="w-3 h-3 text-amber-500 shrink-0" />}
                   <p className={`text-[11px] sm:text-xs font-medium uppercase tracking-wider truncate ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>

@@ -6,7 +6,7 @@ from pathlib import Path
 from .models import TranslationCache
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(dotenv_path=BASE_DIR / '.env')
+load_dotenv(dotenv_path=BASE_DIR / '.env', override=True)
 
 _gemini_client = None
 _groq_client = None
@@ -100,7 +100,7 @@ def translate_flexible(text, source, target, provider=None):
     ).first()
 
     if cached_hit:
-        print(f"Cache Hit: Returning saved translation for '{cleaned_text[:20]}...'")
+        print("Cache Hit: Returning saved translation from database cache.")
         return cached_hit.translated_text
 
     # 2. Call AI Provider with auto-fallback
