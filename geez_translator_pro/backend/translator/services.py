@@ -39,9 +39,10 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
     Fast & Accurate Image Preprocessor (~0.05s):
     1. Red-Ink Equalization: Extracts min(G, B) channels to ensure red liturgical ink
        (ቀይ ቀለም / rubrics) is as dark and legible as black ink on parchment.
-    2. Quiet-Zone Auto-Padding: Adds a clean 40px white border so Tesseract never clips
-       character stems or fails baseline estimation on tightly cropped images.
-    3. Bilateral Denoising: Preserves Fidel vowel diacritics and loops.
+    2. Adaptive Scaling: Rescales image to ~1200px optimal line height with cubic interpolation.
+    3. Bilateral Denoising: Preserves Fidel vowel diacritics and loops while smoothing paper grain.
+    Note: Artificial white border padding (copyMakeBorder value=255) is intentionally excluded
+    as high-contrast borders fool Tesseract's layout analyzer into treating manuscripts as non-text.
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -54,28 +55,24 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blended = cv2.addWeighted(red_equalized, 0.65, gray, 0.35, 0)
 
-        # 40px white quiet-zone padding to stabilize Tesseract line/word segmentation on cropped boxes
-        padded = cv2.copyMakeBorder(blended, 40, 40, 40, 40, cv2.BORDER_CONSTANT, value=255)
-
         # Scale to optimal height (~1200px) with cubic interpolation
-        h, w = padded.shape
+        h, w = blended.shape
         if max(h, w) < 1200:
             scale = 1200.0 / max(h, w)
-            padded = cv2.resize(padded, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            blended = cv2.resize(blended, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
         # Gentle bilateral filter to smooth paper fibers without smudging Fidel vowel dots
-        processed = cv2.bilateralFilter(padded, d=5, sigmaColor=50, sigmaSpace=50)
+        processed = cv2.bilateralFilter(blended, d=5, sigmaColor=50, sigmaSpace=50)
         return processed
     else:
         # Latin / English preprocessing with CLAHE and Otsu
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        padded = cv2.copyMakeBorder(gray, 40, 40, 40, 40, cv2.BORDER_CONSTANT, value=255)
-        h, w = padded.shape
+        h, w = gray.shape
         if max(h, w) < 1400:
             scale = 1400.0 / max(h, w)
-            padded = cv2.resize(padded, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
         clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-        enhanced = clahe.apply(padded)
+        enhanced = clahe.apply(gray)
         _, thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return thresh
 
@@ -89,7 +86,7 @@ def restore_fidel_ocr_text(raw_text, provider=None):
     if not raw_text or len(raw_text.strip()) < 8:
         return raw_text
 
-    preferred = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
+    preferred = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
 
     prompt = (
         "You are an expert scholar in Classical Ge'ez (ግዕዝ) and Ethiopian Orthodox Tewahedo liturgical manuscripts. "
@@ -182,16 +179,17 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
         # Step 1: Preprocess image (~0.05s)
         processed_cv = preprocess_image_bytes(image_bytes, is_ethiopic=is_ethiopic)
         
-        # Step 2: Local Tesseract OCR (~0.4s)
+        # Step 2: Local Tesseract OCR (~0.3s)
         local_text = ""
         if processed_cv is not None:
-            tess_config = "--psm 6 --oem 1"
+            # Try PSM 3 (automatic layout) first for multi-line/paragraph manuscripts
+            tess_config = "--psm 3 --oem 1"
             local_text = pytesseract.image_to_string(processed_cv, lang=tess_lang, config=tess_config).strip()
             
-            # If PSM 6 yielded few characters, try PSM 4
+            # If PSM 3 yielded few characters (e.g. tightly cropped box), try PSM 6 (single block)
             fidel_count = len(re.findall(r'[\u1200-\u137F]', local_text)) if is_ethiopic else 0
-            if is_ethiopic and fidel_count < 8:
-                alt_text = pytesseract.image_to_string(processed_cv, lang=tess_lang, config="--psm 4 --oem 1").strip()
+            if is_ethiopic and fidel_count < 15:
+                alt_text = pytesseract.image_to_string(processed_cv, lang=tess_lang, config="--psm 6 --oem 1").strip()
                 if len(re.findall(r'[\u1200-\u137F]', alt_text)) > fidel_count:
                     local_text = alt_text
 
