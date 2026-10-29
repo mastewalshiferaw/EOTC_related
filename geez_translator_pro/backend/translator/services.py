@@ -83,7 +83,7 @@ def restore_fidel_ocr_text(raw_text, provider=None):
     Corrects optical character misrecognitions (e.g. ዶ->ይ, ቪ->ዚ, 'ቡ->አቡ, broken punctuation)
     and formats raw OCR into clean, authentic canonical Fidel using high-speed LLM inference.
     """
-    if not raw_text or len(raw_text.strip()) < 8:
+    if not raw_text or len(raw_text.strip()) < 3:
         return raw_text
 
     preferred = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
@@ -193,11 +193,11 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
                 if len(re.findall(r'[\u1200-\u137F]', alt_text)) > fidel_count:
                     local_text = alt_text
 
-        # Step 3: Check character detection & run fast LLM formatting
+        # Step 3: Check character detection & run integrated AI polish directly
         if is_ethiopic:
             fidel_count = len(re.findall(r'[\u1200-\u137F]', local_text))
-            if fidel_count >= 5:
-                print(f"OCR Mode: Local Tesseract ({fidel_count} Fidel characters). Running Fast LLM Formatter...")
+            if fidel_count >= 2:
+                print(f"OCR Pipeline: Extracted {fidel_count} Fidel characters. Running integrated AI polish...")
                 if auto_clean:
                     formatted_text = restore_fidel_ocr_text(local_text, provider=provider)
                     return formatted_text
