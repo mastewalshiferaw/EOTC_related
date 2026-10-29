@@ -134,13 +134,13 @@ export default function ImageCropModal({
   const previewBg = isDark ? 'bg-[#08090d]' : 'bg-zinc-100/70';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className={`relative max-w-4xl w-full max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden ${modalBg}`}>
-        {/* Compact Top Bar - Explanation removed to save space */}
-        <div className={`px-4 sm:px-5 py-2.5 flex items-center justify-between border-b ${headerBorder}`}>
-          <div className="flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className={`relative max-w-4xl w-full max-h-[96vh] sm:max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden ${modalBg}`}>
+        {/* Compact Top Bar */}
+        <div className={`px-3.5 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between border-b ${headerBorder}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <CropIcon className={`w-3.5 h-3.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`} />
-            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+            <span className={`text-[11px] sm:text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
               Crop Text
             </span>
           </div>
@@ -153,7 +153,7 @@ export default function ImageCropModal({
           </button>
         </div>
 
-        {/* Viewport - Fully auto-fits image so NO scroll is required */}
+        {/* Viewport - Auto-fits image without scroll */}
         <div className={`flex-1 min-h-0 p-2 sm:p-4 flex items-center justify-center overflow-hidden ${previewBg}`}>
           <ReactCrop
             crop={crop}
@@ -168,7 +168,7 @@ export default function ImageCropModal({
               alt="Crop text preview"
               onLoad={onImageLoad}
               style={{
-                maxHeight: 'calc(90vh - 110px)',
+                maxHeight: 'calc(88vh - 100px)',
                 maxWidth: '100%',
                 width: 'auto',
                 height: 'auto',
@@ -181,21 +181,21 @@ export default function ImageCropModal({
         </div>
 
         {/* Compact Action Controls */}
-        <div className={`px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 border-t ${headerBorder}`}>
+        <div className={`px-3.5 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-3 border-t ${headerBorder}`}>
           <button
             type="button"
             onClick={onClose}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition ${isDark ? 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'border-zinc-300 text-zinc-600 hover:text-black hover:bg-zinc-100'}`}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border transition ${isDark ? 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'border-zinc-300 text-zinc-600 hover:text-black hover:bg-zinc-100'}`}
           >
             <CloseIcon className="w-3.5 h-3.5" />
             <span>Cancel</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={onUseOriginal}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition ${isDark ? 'border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3.5 py-1.5 rounded-xl border transition ${isDark ? 'border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
             >
               <ExpandIcon className="w-3.5 h-3.5" />
               <span>Full</span>
@@ -205,7 +205,7 @@ export default function ImageCropModal({
               type="button"
               disabled={processing}
               onClick={handleApplyCrop}
-              className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-xl shadow-md transition disabled:opacity-50 ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-black'}`}
+              className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 sm:px-4 py-1.5 rounded-xl shadow-md transition disabled:opacity-50 ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-black'}`}
             >
               <CropIcon className="w-3.5 h-3.5" />
               <span>{processing ? "Cropping" : "Crop"}</span>

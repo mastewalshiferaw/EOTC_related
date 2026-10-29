@@ -213,22 +213,22 @@ export default function MasGeezTranslator() {
   const optionStyle = isDark ? 'bg-zinc-900 text-zinc-100' : 'bg-white text-zinc-900';
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 font-sans ${pageTheme}`}>
+    <div className={`min-h-screen transition-colors duration-300 font-sans flex flex-col ${pageTheme}`}>
       {/* Top Navbar */}
-      <nav className={`max-w-5xl mx-auto p-6 flex justify-between items-center border-b ${navBorder}`}>
-        <div className="flex items-center gap-2.5">
-          <span className={`font-black text-2xl tracking-tighter uppercase italic ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+      <nav className={`w-full max-w-5xl mx-auto px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center border-b ${navBorder}`}>
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <span className={`font-black text-xl sm:text-2xl tracking-tighter uppercase italic ${isDark ? 'text-white' : 'text-zinc-900'}`}>
             MAS_GEEZ
           </span>
-          <span className={`text-[10px] border px-2 py-0.5 rounded font-bold tracking-widest uppercase ${isDark ? 'border-zinc-700 text-zinc-400 bg-zinc-900' : 'border-zinc-300 text-zinc-600 bg-zinc-100'}`}>
+          <span className={`text-[9px] sm:text-[10px] border px-1.5 sm:px-2 py-0.5 rounded font-bold tracking-widest uppercase ${isDark ? 'border-zinc-700 text-zinc-400 bg-zinc-900' : 'border-zinc-300 text-zinc-600 bg-zinc-100'}`}>
             Translator Pro
           </span>
         </div>
 
-        {/* Theme Toggle Button: Icon + Short Text */}
+        {/* Theme Toggle Button */}
         <button 
           onClick={() => setIsDark(!isDark)} 
-          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
+          className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
           title={isDark ? "Light mode" : "Dark mode"}
         >
           {isDark ? (
@@ -246,13 +246,13 @@ export default function MasGeezTranslator() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto p-6 lg:p-12">
-        {/* Language Selectors */}
-        <div className="flex items-center gap-3 mb-6">
+      <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 flex flex-col">
+        {/* Language Selectors (Responsive Flex) */}
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <select 
             value={sourceLang} 
             onChange={(e) => setSourceLang(e.target.value)} 
-            className={`border rounded-xl px-3.5 py-2 outline-none font-semibold text-xs tracking-wide cursor-pointer transition ${selectStyle}`}
+            className={`flex-1 sm:flex-initial min-w-0 border rounded-xl px-2.5 sm:px-3.5 py-2 outline-none font-semibold text-xs tracking-wide cursor-pointer transition ${selectStyle}`}
           >
             <option value="Ge'ez" className={optionStyle}>Ge'ez (ግዕዝ)</option>
             <option value="Amharic" className={optionStyle}>Amharic (አማርኛ)</option>
@@ -262,15 +262,15 @@ export default function MasGeezTranslator() {
           <button 
             onClick={swapLanguages} 
             title="Swap" 
-            className={`p-2 rounded-xl border text-sm font-bold transition hover:scale-105 active:scale-95 ${isDark ? 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
+            className={`shrink-0 p-2 rounded-xl border text-sm font-bold transition hover:scale-105 active:scale-95 ${isDark ? 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
           >
-            <SwapIcon className="w-4 h-4" />
+            <SwapIcon className="w-3.5 h-3.5" />
           </button>
 
           <select 
             value={targetLang} 
             onChange={(e) => setTargetLang(e.target.value)} 
-            className={`border rounded-xl px-3.5 py-2 outline-none font-semibold text-xs tracking-wide cursor-pointer transition ${selectStyle}`}
+            className={`flex-1 sm:flex-initial min-w-0 border rounded-xl px-2.5 sm:px-3.5 py-2 outline-none font-semibold text-xs tracking-wide cursor-pointer transition ${selectStyle}`}
           >
             <option value="Amharic" className={optionStyle}>Amharic (አማርኛ)</option>
             <option value="English" className={optionStyle}>English</option>
@@ -279,14 +279,14 @@ export default function MasGeezTranslator() {
         </div>
 
         {/* Translation Split Cards */}
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-px rounded-3xl overflow-hidden border shadow-2xl transition-colors ${isDark ? 'bg-zinc-800/80 border-zinc-800' : 'bg-zinc-300/80 border-zinc-200'}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-px rounded-2xl sm:rounded-3xl overflow-hidden border shadow-xl sm:shadow-2xl transition-colors flex-1 ${isDark ? 'bg-zinc-800/80 border-zinc-800' : 'bg-zinc-300/80 border-zinc-200'}`}>
           {/* Left: Input / OCR Area */}
-          <div className={`p-8 min-h-[500px] flex flex-col transition-colors ${isDark ? 'bg-[#12141a]' : 'bg-white'}`}>
+          <div className={`p-4 sm:p-6 lg:p-8 min-h-[260px] sm:min-h-[350px] lg:min-h-[480px] flex flex-col transition-colors ${isDark ? 'bg-[#12141a]' : 'bg-white'}`}>
             <textarea 
               onPaste={handlePaste}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className={`flex-1 bg-transparent border-none outline-none resize-none text-xl font-serif leading-relaxed transition ${isDark ? 'text-zinc-100 placeholder:text-zinc-500' : 'text-zinc-900 placeholder:text-zinc-400'}`}
+              className={`flex-1 bg-transparent border-none outline-none resize-none text-base sm:text-xl font-serif leading-relaxed transition ${isDark ? 'text-zinc-100 placeholder:text-zinc-500' : 'text-zinc-900 placeholder:text-zinc-400'}`}
               placeholder="Type, paste text, or paste image (Ctrl+V)..."
             />
             
@@ -298,30 +298,30 @@ export default function MasGeezTranslator() {
               className="hidden" 
             />
 
-            <div className={`mt-6 pt-4 flex flex-wrap justify-between items-center gap-4 border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-100'}`}>
-              <div className="flex items-center gap-3">
-                {/* Upload Button: Icon + Short Text */}
+            <div className={`mt-4 sm:mt-6 pt-3.5 sm:pt-4 flex items-center justify-between gap-2 border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-100'}`}>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Upload Button */}
                 <button 
                   type="button" 
                   onClick={() => fileInputRef.current?.click()}
-                  className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition flex items-center gap-1.5 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+                  className={`shrink-0 text-xs font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border transition flex items-center gap-1.5 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
                 >
                   <UploadImageIcon className="w-3.5 h-3.5" />
                   <span>Upload</span>
                 </button>
-                <div className="flex items-center gap-1.5">
-                  {loading && <SpinnerIcon className="w-3 h-3 text-amber-500" />}
-                  <p className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                <div className="flex items-center gap-1 min-w-0">
+                  {loading && <SpinnerIcon className="w-3 h-3 text-amber-500 shrink-0" />}
+                  <p className={`text-[11px] sm:text-xs font-medium uppercase tracking-wider truncate ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                     {loading ? "Processing..." : statusMessage}
                   </p>
                 </div>
               </div>
 
-              {/* Translate Button: Icon + Short Text */}
+              {/* Translate Button */}
               <button 
                 onClick={handleTranslate} 
                 disabled={loading || !inputText.trim()}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
+                className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-1.5 sm:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
               >
                 {loading ? <SpinnerIcon className="w-3.5 h-3.5" /> : <SparkleIcon className="w-3.5 h-3.5" />}
                 <span>{loading ? "Translating" : "Translate"}</span>
@@ -330,20 +330,20 @@ export default function MasGeezTranslator() {
           </div>
 
           {/* Right: Output Translation Area */}
-          <div className={`p-8 min-h-[500px] flex flex-col transition-colors ${isDark ? 'bg-[#0d0f14]' : 'bg-[#fafafa]'}`}>
-            <div className={`flex-1 text-xl font-serif leading-relaxed overflow-y-auto whitespace-pre-wrap transition ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
+          <div className={`p-4 sm:p-6 lg:p-8 min-h-[240px] sm:min-h-[350px] lg:min-h-[480px] flex flex-col transition-colors ${isDark ? 'bg-[#0d0f14]' : 'bg-[#fafafa]'}`}>
+            <div className={`flex-1 text-base sm:text-xl font-serif leading-relaxed overflow-y-auto whitespace-pre-wrap transition ${isDark ? 'text-zinc-100' : 'text-zinc-900'}`}>
               {outputText ? (
                 outputText
               ) : (
-                <span className={`italic text-lg ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                <span className={`italic text-base sm:text-lg ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
                   Translation will appear here...
                 </span>
               )}
             </div>
 
             {outputText && (
-              <div className={`mt-6 pt-4 flex justify-end border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-200/80'}`}>
-                {/* Copy Button: Icon + Short Text */}
+              <div className={`mt-4 sm:mt-6 pt-3.5 sm:pt-4 flex justify-end border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-200/80'}`}>
+                {/* Copy Button */}
                 <button 
                   onClick={handleCopy} 
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
@@ -377,7 +377,7 @@ export default function MasGeezTranslator() {
         />
       )}
 
-      <footer className={`py-6 w-full text-center text-[10px] uppercase tracking-[0.4em] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
+      <footer className={`py-4 sm:py-6 w-full text-center text-[9px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
         MAS_GEEZ Digital Philology
       </footer>
     </div>
