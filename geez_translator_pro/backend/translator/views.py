@@ -9,8 +9,9 @@ class OCROnlyView(APIView):
         if not file:
             return Response({"text": "No file received"}, status=400)
         
-        # Now using the Hybrid OCR logic
-        text = perform_hybrid_ocr(file.read())
+        # Read desired language from form data (defaulting to Ge'ez / Amharic)
+        lang = request.data.get('lang', 'amh')
+        text = perform_hybrid_ocr(file.read(), lang=lang)
         return Response({"text": text})
 
 class TranslateFlexibleView(APIView):
@@ -19,6 +20,5 @@ class TranslateFlexibleView(APIView):
         source = request.data.get('source', "Ge'ez")
         target = request.data.get('target', "Amharic")
         
-        # Now using the Cached Translation logic
         translation = translate_flexible(text, source, target)
         return Response({"translation": translation})
