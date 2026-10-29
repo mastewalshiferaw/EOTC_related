@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, ClipboardEvent, ChangeEvent } from 'react';
 import axios from 'axios';
+import ImageCropModal from './components/ImageCropModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
@@ -78,13 +79,18 @@ export default function MasGeezTranslator() {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [copied, setCopied] = useState(false);
+
+  // Image cropping states
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processImageFile = async (file: File) => {
+  const processImagePayload = async (fileOrBlob: File | Blob) => {
     setLoading(true);
     setStatusMessage("Running Hybrid OCR...");
     const formData = new FormData();
-    formData.append('file', file);
+    const filename = fileOrBlob instanceof File ? fileOrBlob.name : 'cropped-image.png';
+    formData.append('file', fileOrBlob, filename);
     formData.append('lang', sourceLang);
 
     try {
@@ -100,6 +106,15 @@ export default function MasGeezTranslator() {
     }
   };
 
+  const startCropFlow = (file: File) => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setPendingFile(file);
+  };
+
   const handlePaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -108,7 +123,7 @@ export default function MasGeezTranslator() {
         const file = items[i].getAsFile();
         if (file) {
           e.preventDefault();
-          await processImageFile(file);
+          startCropFlow(file);
         }
       }
     }
@@ -117,8 +132,31 @@ export default function MasGeezTranslator() {
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await processImageFile(file);
+      startCropFlow(file);
     }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+    setPendingFile(null);
+    await processImagePayload(croppedBlob);
+  };
+
+  const handleUseOriginal = async () => {
+    if (!pendingFile) return;
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    const file = pendingFile;
+    setCropImageSrc(null);
+    setPendingFile(null);
+    await processImagePayload(file);
+  };
+
+  const handleCloseCrop = () => {
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+    setPendingFile(null);
   };
 
   const handleTranslate = async () => {
@@ -316,6 +354,17 @@ export default function MasGeezTranslator() {
           </div>
         </div>
       </main>
+
+      {/* Image Cropper Modal */}
+      {cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          isDark={isDark}
+          onCropComplete={handleCropComplete}
+          onUseOriginal={handleUseOriginal}
+          onClose={handleCloseCrop}
+        />
+      )}
 
       <footer className={`py-6 w-full text-center text-[10px] uppercase tracking-[0.4em] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
         MAS_GEEZ Digital Philology
