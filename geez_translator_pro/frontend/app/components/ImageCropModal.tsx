@@ -11,7 +11,7 @@ interface ImageCropModalProps {
   onClose: () => void;
 }
 
-function CropIcon({ className = "w-4 h-4" }: { className?: string }) {
+function CropIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2v14a2 2 0 0 0 2 2h14" />
@@ -20,7 +20,7 @@ function CropIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function ExpandIcon({ className = "w-4 h-4" }: { className?: string }) {
+function ExpandIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="15 3 21 3 21 9" />
@@ -31,7 +31,7 @@ function ExpandIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function CloseIcon({ className = "w-4 h-4" }: { className?: string }) {
+function CloseIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18" />
@@ -139,15 +139,15 @@ export default function ImageCropModal({
         {/* Header */}
         <div className={`p-5 flex items-center justify-between border-b ${headerBorder}`}>
           <div>
-            <h3 className="text-base font-bold tracking-tight">Crop Image for Accurate OCR</h3>
+            <h3 className="text-base font-bold tracking-tight">Crop Text</h3>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              Select only the text area to eliminate borders, binding shadows, and background noise.
+              Select the text area to remove borders, shadows, and noise.
             </p>
           </div>
           <button
             onClick={onClose}
             className={`p-2 rounded-xl border transition ${isDark ? 'border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white' : 'border-zinc-200 hover:bg-zinc-100 text-zinc-600 hover:text-black'}`}
-            title="Cancel"
+            title="Close"
           >
             <CloseIcon className="w-4 h-4" />
           </button>
@@ -177,29 +177,30 @@ export default function ImageCropModal({
           <button
             type="button"
             onClick={onClose}
-            className={`text-xs font-semibold px-4 py-2 rounded-xl border transition ${isDark ? 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'border-zinc-300 text-zinc-600 hover:text-black hover:bg-zinc-100'}`}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition ${isDark ? 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'border-zinc-300 text-zinc-600 hover:text-black hover:bg-zinc-100'}`}
           >
-            Cancel
+            <CloseIcon className="w-3.5 h-3.5" />
+            <span>Cancel</span>
           </button>
 
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onUseOriginal}
-              className={`flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl border transition ${isDark ? 'border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition ${isDark ? 'border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
             >
               <ExpandIcon className="w-3.5 h-3.5" />
-              <span>Use Entire Image</span>
+              <span>Full</span>
             </button>
 
             <button
               type="button"
               disabled={processing}
               onClick={handleApplyCrop}
-              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-5 py-2 rounded-xl shadow-md transition disabled:opacity-50 ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-black'}`}
+              className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-md transition disabled:opacity-50 ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-black'}`}
             >
               <CropIcon className="w-3.5 h-3.5" />
-              <span>{processing ? "Cropping..." : "Crop & Extract Text"}</span>
+              <span>{processing ? "Cropping" : "Crop"}</span>
             </button>
           </div>
         </div>

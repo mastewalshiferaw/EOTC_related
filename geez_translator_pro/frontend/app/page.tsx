@@ -5,7 +5,7 @@ import ImageCropModal from './components/ImageCropModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
-function SunIcon({ className = "w-4 h-4" }: { className?: string }) {
+function SunIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="4" />
@@ -14,7 +14,7 @@ function SunIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function MoonIcon({ className = "w-4 h-4" }: { className?: string }) {
+function MoonIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
@@ -22,7 +22,7 @@ function MoonIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function SwapIcon({ className = "w-4 h-4" }: { className?: string }) {
+function SwapIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m16 3 4 4-4 4" />
@@ -33,7 +33,7 @@ function SwapIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function UploadImageIcon({ className = "w-4 h-4" }: { className?: string }) {
+function UploadImageIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
@@ -43,7 +43,15 @@ function UploadImageIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
+function SparkleIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    </svg>
+  );
+}
+
+function CopyIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
@@ -52,7 +60,7 @@ function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function CheckIcon({ className = "w-4 h-4" }: { className?: string }) {
+function CheckIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
@@ -60,7 +68,7 @@ function CheckIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function SpinnerIcon({ className = "w-4 h-4" }: { className?: string }) {
+function SpinnerIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
       <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
@@ -97,10 +105,10 @@ export default function MasGeezTranslator() {
       const res = await axios.post(`${API_BASE}/api/ocr-only/`, formData);
       const extracted = res.data.text || "";
       setInputText((prev) => (prev ? prev + "\n" + extracted : extracted));
-      setStatusMessage("Text extracted successfully");
+      setStatusMessage("Extracted");
     } catch (err: any) {
       console.error(err);
-      setStatusMessage("OCR Failed. Please try another image.");
+      setStatusMessage("OCR Failed");
     } finally {
       setLoading(false);
     }
@@ -173,7 +181,7 @@ export default function MasGeezTranslator() {
       setStatusMessage("Done");
     } catch (err: any) {
       console.error(err);
-      setStatusMessage("Translation Failed");
+      setStatusMessage("Failed");
     } finally {
       setLoading(false);
     }
@@ -193,7 +201,7 @@ export default function MasGeezTranslator() {
     if (!outputText) return;
     navigator.clipboard.writeText(outputText);
     setCopied(true);
-    setStatusMessage("Copied to clipboard!");
+    setStatusMessage("Copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -217,11 +225,11 @@ export default function MasGeezTranslator() {
           </span>
         </div>
 
-        {/* Theme Toggle Button */}
+        {/* Theme Toggle Button: Icon + Short Text */}
         <button 
           onClick={() => setIsDark(!isDark)} 
-          className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
-          title={isDark ? "Switch to Light mode" : "Switch to Dark mode"}
+          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
+          title={isDark ? "Light mode" : "Dark mode"}
         >
           {isDark ? (
             <>
@@ -253,7 +261,7 @@ export default function MasGeezTranslator() {
 
           <button 
             onClick={swapLanguages} 
-            title="Swap languages" 
+            title="Swap" 
             className={`p-2 rounded-xl border text-sm font-bold transition hover:scale-105 active:scale-95 ${isDark ? 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
           >
             <SwapIcon className="w-4 h-4" />
@@ -292,13 +300,14 @@ export default function MasGeezTranslator() {
 
             <div className={`mt-6 pt-4 flex flex-wrap justify-between items-center gap-4 border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-100'}`}>
               <div className="flex items-center gap-3">
+                {/* Upload Button: Icon + Short Text */}
                 <button 
                   type="button" 
                   onClick={() => fileInputRef.current?.click()}
-                  className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition flex items-center gap-2 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+                  className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition flex items-center gap-1.5 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
                 >
                   <UploadImageIcon className="w-3.5 h-3.5" />
-                  <span>Upload Image</span>
+                  <span>Upload</span>
                 </button>
                 <div className="flex items-center gap-1.5">
                   {loading && <SpinnerIcon className="w-3 h-3 text-amber-500" />}
@@ -308,13 +317,14 @@ export default function MasGeezTranslator() {
                 </div>
               </div>
 
+              {/* Translate Button: Icon + Short Text */}
               <button 
                 onClick={handleTranslate} 
                 disabled={loading || !inputText.trim()}
-                className={`flex items-center gap-2 px-8 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
               >
-                {loading && <SpinnerIcon className="w-3.5 h-3.5" />}
-                <span>{loading ? "Translating..." : "Translate"}</span>
+                {loading ? <SpinnerIcon className="w-3.5 h-3.5" /> : <SparkleIcon className="w-3.5 h-3.5" />}
+                <span>{loading ? "Translating" : "Translate"}</span>
               </button>
             </div>
           </div>
@@ -333,19 +343,20 @@ export default function MasGeezTranslator() {
 
             {outputText && (
               <div className={`mt-6 pt-4 flex justify-end border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-200/80'}`}>
+                {/* Copy Button: Icon + Short Text */}
                 <button 
                   onClick={handleCopy} 
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
                 >
                   {copied ? (
                     <>
                       <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-emerald-500 font-medium">Copied!</span>
+                      <span className="text-emerald-500 font-medium">Copied</span>
                     </>
                   ) : (
                     <>
                       <CopyIcon className="w-3.5 h-3.5" />
-                      <span>Copy Result</span>
+                      <span>Copy</span>
                     </>
                   )}
                 </button>
