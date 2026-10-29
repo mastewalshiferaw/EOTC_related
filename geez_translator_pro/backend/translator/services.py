@@ -50,8 +50,6 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
 
     if is_ethiopic:
         # Red-ink liturgical equalization:
-        # Red ink has high Red (channel 2), but low Green (1) and Blue (0). Black ink has low R, G, B.
-        # Taking minimum of green and blue turns red rubric text as dark as black ink.
         red_equalized = np.minimum(img[:, :, 0], img[:, :, 1])
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blended = cv2.addWeighted(red_equalized, 0.65, gray, 0.35, 0)
@@ -82,14 +80,16 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
         return thresh
 
 
-def restore_fidel_ocr_text(raw_text):
+def restore_fidel_ocr_text(raw_text, provider=None):
     """
     Intelligent Post-OCR Reconstruction Layer:
     Corrects optical character misrecognitions (e.g. ዶ->ይ, ቪ->ዚ, 'ቡ->አቡ, broken punctuation)
-    using LLM intelligence (Gemini with Groq fallback), preserving authentic canonical Fidel.
+    using dual-provider LLM intelligence (Gemini / Groq), preserving authentic canonical Fidel.
     """
     if not raw_text or len(raw_text.strip()) < 10:
         return raw_text
+
+    preferred = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     prompt = (
         "You are an expert scholar in Classical Ge'ez (ግዕዝ) and Ethiopian Orthodox Tewahedo liturgy. "
@@ -103,8 +103,7 @@ def restore_fidel_ocr_text(raw_text):
         "- Do NOT add quotation marks or intro/outro text."
     )
 
-    # 1. Try Gemini
-    try:
+    def _call_gemini():
         client = get_gemini_client()
         if client:
             model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -115,11 +114,9 @@ def restore_fidel_ocr_text(raw_text):
             if response.text and len(response.text.strip()) > 5:
                 print("Post-OCR Cleanup: Restored via Gemini")
                 return response.text.strip()
-    except Exception as e:
-        print(f"Gemini Post-OCR cleanup fallback: {e}")
+        return None
 
-    # 2. Try Groq fallback
-    try:
+    def _call_groq():
         from .translation_service import get_groq_client
         groq_client = get_groq_client()
         if groq_client:
@@ -137,14 +134,40 @@ def restore_fidel_ocr_text(raw_text):
             if content.strip():
                 print("Post-OCR Cleanup: Restored via Groq")
                 return content.strip()
-    except Exception as e:
-        print(f"Groq Post-OCR cleanup fallback: {e}")
+        return None
+
+    if preferred == "groq":
+        try:
+            res = _call_groq()
+            if res:
+                return res
+        except Exception as e:
+            print(f"Groq restoration error ({e}), attempting Gemini fallback...")
+        try:
+            res = _call_gemini()
+            if res:
+                return res
+        except Exception as e2:
+            print(f"Gemini restoration error: {e2}")
+    else:
+        try:
+            res = _call_gemini()
+            if res:
+                return res
+        except Exception as e:
+            print(f"Gemini restoration error ({e}), attempting Groq fallback...")
+        try:
+            res = _call_groq()
+            if res:
+                return res
+        except Exception as e2:
+            print(f"Groq restoration error: {e2}")
 
     # Fallback to raw OCR text if LLM restoration fails
     return raw_text
 
 
-def perform_hybrid_ocr(image_bytes, lang="amh"):
+def perform_hybrid_ocr(image_bytes, lang="amh", provider=None):
     """
     Production-Grade Hybrid OCR Pipeline:
     1. Preprocesses image with Red-Ink Equalization and 40px Quiet-Zone Padding.
@@ -179,7 +202,7 @@ def perform_hybrid_ocr(image_bytes, lang="amh"):
             if fidel_count >= 5:
                 print(f"OCR Mode: Local Tesseract (Extracted {fidel_count} Fidel characters)")
                 # Step 4: Apply Post-OCR Contextual Restoration
-                restored_text = restore_fidel_ocr_text(local_text)
+                restored_text = restore_fidel_ocr_text(local_text, provider=provider)
                 return restored_text
         else:
             latin_count = len(re.findall(r'[a-zA-Z]', local_text))

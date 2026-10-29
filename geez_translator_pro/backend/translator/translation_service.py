@@ -79,11 +79,18 @@ def translate_with_groq(text, source, target):
     return content.strip()
 
 
-def translate_flexible(text, source, target):
+def translate_flexible(text, source, target, provider=None):
+    """
+    Unified dual-provider translation:
+    - Supports 'gemini' and 'groq'
+    - Respects dynamic provider parameter or .env default (LLM_PROVIDER)
+    - Automatically falls back to the other provider if one encounters rate-limits or errors
+    """
     if not text or not text.strip():
         return ""
 
     cleaned_text = text.strip()
+    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     # 1. Check database cache
     cached_hit = TranslationCache.objects.filter(
@@ -96,21 +103,10 @@ def translate_flexible(text, source, target):
         print(f"Cache Hit: Returning saved translation for '{cleaned_text[:20]}...'")
         return cached_hit.translated_text
 
-    # 2. Call AI Provider (Primary: Gemini, Fallback: Groq)
-    preferred_provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+    # 2. Call AI Provider with auto-fallback
     translated_result = ""
 
-    if preferred_provider == "gemini":
-        try:
-            print(f"Calling Gemini ({os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')})...")
-            translated_result = translate_with_gemini(cleaned_text, source, target)
-        except Exception as e:
-            print(f"Gemini error ({e}), attempting Groq fallback...")
-            try:
-                translated_result = translate_with_groq(cleaned_text, source, target)
-            except Exception as e2:
-                return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
-    else:
+    if preferred_provider == "groq":
         try:
             print(f"Calling Groq ({os.getenv('GROQ_TEXT_MODEL', 'qwen/qwen3.8-27b')})...")
             translated_result = translate_with_groq(cleaned_text, source, target)
@@ -118,6 +114,16 @@ def translate_flexible(text, source, target):
             print(f"Groq error ({e}), attempting Gemini fallback...")
             try:
                 translated_result = translate_with_gemini(cleaned_text, source, target)
+            except Exception as e2:
+                return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
+    else:
+        try:
+            print(f"Calling Gemini ({os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')})...")
+            translated_result = translate_with_gemini(cleaned_text, source, target)
+        except Exception as e:
+            print(f"Gemini error ({e}), attempting Groq fallback...")
+            try:
+                translated_result = translate_with_groq(cleaned_text, source, target)
             except Exception as e2:
                 return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
 
