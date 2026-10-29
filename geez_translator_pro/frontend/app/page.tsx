@@ -4,6 +4,70 @@ import axios from 'axios';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
+function SunIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  );
+}
+
+function SwapIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m16 3 4 4-4 4" />
+      <path d="M20 7H4" />
+      <path d="m8 21-4-4 4-4" />
+      <path d="M4 17h16" />
+    </svg>
+  );
+}
+
+function UploadImageIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  );
+}
+
+function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function SpinnerIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function MasGeezTranslator() {
   // Light mode as default
   const [isDark, setIsDark] = useState(false);
@@ -13,6 +77,7 @@ export default function MasGeezTranslator() {
   const [targetLang, setTargetLang] = useState("Amharic");
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processImageFile = async (file: File) => {
@@ -86,6 +151,14 @@ export default function MasGeezTranslator() {
     }
   };
 
+  const handleCopy = () => {
+    if (!outputText) return;
+    navigator.clipboard.writeText(outputText);
+    setCopied(true);
+    setStatusMessage("Copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const pageTheme = isDark ? 'bg-[#0b0d11] text-zinc-100' : 'bg-[#f8f9fa] text-zinc-900';
   const navBorder = isDark ? 'border-zinc-800' : 'border-zinc-200';
   const selectStyle = isDark 
@@ -109,9 +182,20 @@ export default function MasGeezTranslator() {
         {/* Theme Toggle Button */}
         <button 
           onClick={() => setIsDark(!isDark)} 
-          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
+          className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
+          title={isDark ? "Switch to Light mode" : "Switch to Dark mode"}
         >
-          <span>{isDark ? '☀️ Light' : '🌙 Dark'}</span>
+          {isDark ? (
+            <>
+              <SunIcon className="w-3.5 h-3.5 text-amber-400" />
+              <span>Light</span>
+            </>
+          ) : (
+            <>
+              <MoonIcon className="w-3.5 h-3.5 text-zinc-600" />
+              <span>Dark</span>
+            </>
+          )}
         </button>
       </nav>
 
@@ -134,7 +218,7 @@ export default function MasGeezTranslator() {
             title="Swap languages" 
             className={`p-2 rounded-xl border text-sm font-bold transition hover:scale-105 active:scale-95 ${isDark ? 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 shadow-sm'}`}
           >
-            ⇄
+            <SwapIcon className="w-4 h-4" />
           </button>
 
           <select 
@@ -175,19 +259,24 @@ export default function MasGeezTranslator() {
                   onClick={() => fileInputRef.current?.click()}
                   className={`text-xs font-semibold px-3.5 py-2 rounded-xl border transition flex items-center gap-2 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
                 >
-                  <span>📷</span> Upload Image
+                  <UploadImageIcon className="w-3.5 h-3.5" />
+                  <span>Upload Image</span>
                 </button>
-                <p className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                  {loading ? "Processing..." : statusMessage}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  {loading && <SpinnerIcon className="w-3 h-3 text-amber-500" />}
+                  <p className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    {loading ? "Processing..." : statusMessage}
+                  </p>
+                </div>
               </div>
 
               <button 
                 onClick={handleTranslate} 
                 disabled={loading || !inputText.trim()}
-                className={`px-8 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
+                className={`flex items-center gap-2 px-8 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
               >
-                {loading ? "Translating..." : "Translate"}
+                {loading && <SpinnerIcon className="w-3.5 h-3.5" />}
+                <span>{loading ? "Translating..." : "Translate"}</span>
               </button>
             </div>
           </div>
@@ -207,13 +296,20 @@ export default function MasGeezTranslator() {
             {outputText && (
               <div className={`mt-6 pt-4 flex justify-end border-t ${isDark ? 'border-zinc-800/80' : 'border-zinc-200/80'}`}>
                 <button 
-                  onClick={() => { 
-                    navigator.clipboard.writeText(outputText); 
-                    setStatusMessage("Copied to clipboard!"); 
-                  }} 
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
+                  onClick={handleCopy} 
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
                 >
-                  📋 Copy Result
+                  {copied ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-emerald-500 font-medium">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon className="w-3.5 h-3.5" />
+                      <span>Copy Result</span>
+                    </>
+                  )}
                 </button>
               </div>
             )}
