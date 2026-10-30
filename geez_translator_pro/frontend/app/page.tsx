@@ -88,7 +88,7 @@ function SpinnerIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
 export default function MasGeezTranslator() {
   // Theme & Model Provider State
   const [isDark, setIsDark] = useState(false);
-  const [provider, setProvider] = useState<'gemini' | 'groq'>('groq');
+  const [provider, setProvider] = useState<'gemini' | 'groq'>('gemini');
 
   // Translation States
   const [inputText, setInputText] = useState("");

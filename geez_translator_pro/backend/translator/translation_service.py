@@ -114,7 +114,7 @@ def translate_flexible(text, source, target, provider=None):
         return ""
 
     cleaned_text = text.strip()
-    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
+    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     # Call AI Provider with auto-fallback
     translated_result = ""
