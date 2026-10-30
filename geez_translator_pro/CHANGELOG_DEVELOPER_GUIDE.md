@@ -320,6 +320,19 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `517e438`
+* **Title**: `feat(deploy): add Render health check endpoints (/healthz, /health/) and configure ALLOWED_HOSTS`
+* **Files Modified**: `backend/core/settings.py`, `backend/core/urls.py`, `backend/translator/urls.py`, `backend/translator/views.py`
+* **What Changed**:
+  - Created `HealthCheckView` in `translator/views.py` with empty `authentication_classes` and `permission_classes` to allow automated platform probes.
+  - Returns `200 OK` with JSON diagnostics on database connection (`connection.ensure_connection()`), Tesseract OCR availability, and active `.env` LLM configuration.
+  - Exposed root endpoints `GET /healthz`, `GET /healthz/`, `GET /health/`, and API endpoint `GET /api/health/`. DRF also automatically responds `200 OK` to `HEAD` requests.
+  - Updated `ALLOWED_HOSTS` in `settings.py` to automatically incorporate `RENDER_EXTERNAL_HOSTNAME` and support production comma-separated hostnames while allowing `*` in debug mode.
+* **What Did NOT Change**: Existing OCR and translation pipeline routes.
+* **Why**: Render's automated deployment runner and zero-downtime health checker require a fast, unauthenticated health endpoint (`/healthz` or `/health/`) that returns HTTP 200 before routing live traffic. Without this and `RENDER_EXTERNAL_HOSTNAME` in `ALLOWED_HOSTS`, production deployments on Render fail with 400 Bad Request or 404.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
