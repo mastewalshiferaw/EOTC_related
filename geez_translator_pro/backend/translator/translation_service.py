@@ -52,28 +52,66 @@ def sanitize_translation_text(text):
     return cleaned.strip()
 
 
+RELIGIOUS_PATTERNS = [
+    r'እግዚአብሔር', r'አምላክ', r'ክርስቶስ', r'ማርያም', r'ድንግል', r'ገብርኤል', r'ሚካኤል',
+    r'መላእክት', r'ሰላም\s*ለኪ', r'አቡነ\s*ዘበሰማያት', r'ስብሐት', r'ይትባረክ', r'ቅዱስ',
+    r'ሃይማኖት', r'ቤተክርስቲያን', r'ካህን', r'ዲያቆን', r'መስቀል', r'ሥላሴ', r'መንፈስ\s*ቅዱስ',
+    r'ጸሎት', r'ቅዳሴ', r'ማኅሌት', r'ውዳሴ', r'ምልእተ\s*ጸጋ', r'ጸባዖት', r'ሰአሊ',
+    r'ይስረይ', r'ኃጣው', r'ኃጢአት', r'ንስሐ', r'በረከት', r'ከርሥ', r'ፍቁር\s*ወልድ',
+    r'ወንጌል', r'ሐዋርያ', r'ነቢይ', r'ፃድቅ', r'ሰማዕት', r'ተፈሥሒ',
+    r'\bgod\b', r'\blord\b', r'\bchrist\b', r'\bjesus\b', r'\bmary\b', r'\bvirgin\b',
+    r'\bsaint\b', r'\bangel\b', r'\bgabriel\b', r'\bmichael\b', r'\bprayer\b',
+    r'\bhymn\b', r'\bliturgy\b', r'\bgospel\b', r'\bapostle\b', r'\btrinity\b',
+    r'\bchurch\b', r'\bsacred\b', r'\bholy\b', r'\bblessed\b', r'\bgrace\b',
+    r'\bintercede\b', r'\bsaviour\b', r'\bsavior\b', r'\bsabaoth\b', r'\bamen\b'
+]
+
+
+def is_religious_context(text: str) -> bool:
+    if not text:
+        return False
+    return any(re.search(pat, text, re.IGNORECASE) for pat in RELIGIOUS_PATTERNS)
+
+
 def build_system_prompt(source, target):
     return (
-        f"You are a revered linguist and master translator of Ethiopian languages, specializing in Classical Ge'ez (ግዕዝ), "
+        f"You are a revered linguist and master philologist of Ethiopian languages, specializing in Classical Ge'ez (ግዕዝ), "
         f"Amharic (አማርኛ), and English.\n"
-        f"Your task is to translate the provided text from {source} into natural, elegant, culturally authentic {target}.\n"
-        "Strict Guidelines:\n"
-        f"1. Output ONLY the direct {target} translation. Never include preambles, introductory filler, or notes.\n"
-        "2. For liturgical or sacred prayers, use standard, reverent phrasing faithful to Ethiopian Orthodox Tewahedo Church (EOTC) tradition "
-        "(e.g. 'አቡነ ዘበሰማያት' -> 'አባታችን ሆይ በሰማያት የምትኖር...', 'በሰላመ ቅዱስ ገብርኤል' -> 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ በመልአኩ በቅዱስ ገብርኤል ሰላምታ...').\n"
+        f"Your task is to translate the provided text from {source} into natural, elegant, culturally authentic, and context-appropriate {target}.\n\n"
+        "Strict Translation Guidelines:\n"
+        f"1. Output ONLY the direct {target} translation. Never include preambles, introductory filler, commentary, or notes.\n"
+        "2. CONTEXT-AWARE REGISTER (SACRED vs. SECULAR):\n"
+        "   - RELIGIOUS & LITURGICAL TEXTS (Prayers, scriptures, EOTC church hymns, Marian salutations, theological treatises, blessings):\n"
+        "     * Translate in the sense and spirit of religion, adhering faithfully to Ethiopian Orthodox Tewahedo Church (EOTC) ecclesiastical tradition.\n"
+        "     * Use reverent sacred terminology and standard liturgical phrasing (e.g., 'አቡነ ዘበሰማያት' -> 'አባታችን ሆይ በሰማያት የምትኖር...', 'በሰላመ ቅዱስ ገብርኤል መልአክ' -> 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ በመልአኩ በቅዱስ ገብርኤል ሰላምታ...', 'ሰአሊ ለነ' -> 'ለምኚልን/አማልጂን', 'ይስረይ ለነ ኃጣውኢነ' -> 'ኃጢአታችንን ያስተሰርይልን/ይቅር ይለን ዘንድ', 'ጸባዖት' -> 'የሠራዊት ጌታ / Lord of Hosts', 'ምልእተ ጸጋ' -> 'ጸጋን የተመላሽ ሆይ / Full of Grace', 'እግዝእትየ' -> 'እመቤቴ / Our Lady').\n"
+        "     * Maintain theological solemnity, reverence, and orthodox dogmatic accuracy.\n"
+        "   - SECULAR, HISTORICAL & EVERYDAY TEXTS (Narratives, historical chronicles, modern conversation, legal, agricultural, science):\n"
+        "     * Translate in natural, clear, contemporary secular language.\n"
+        "     * Do NOT force religious formulas, prayers, or pious blessings onto secular sentences unless explicitly stated in the source text.\n"
         "3. Translate full thoughts coherently into natural, flowing sentences. Avoid robotic literal glossing.\n"
         "4. Do NOT repeat words, phrases, or conversational sentences.\n"
         "5. Preserve original prayer stanza line breaks and authentic Fidel punctuation.\n"
         "6. ETHIOPIAN / GE'EZ NUMERAL TRANSLATION RULES:\n"
         "   - Classical Ge'ez numerals use: ፩=1, ፪=2, ፫=3, ፬=4, ፭=5, ፮=6, ፯=7, ፰=8, ፱=9, ፲=10, ፳=20, ፴=30, ፵=40, ፶=50, ፷=60, ፸=70, ፹=80, ፺=90, ፻=100, ፼=10,000.\n"
         "   - When translating from Ge'ez to Amharic or English, you MUST translate all Ge'ez numerals into standard Arabic digits or standard written words (e.g. 'ምዕራፍ ፩' -> 'ምዕራፍ 1' or 'Chapter 1', 'ቁጥር ፭' -> 'ቁጥር 5' or 'Verse 5', '፲፭' -> '15', '፪ሺ፲፯' -> '2017'). NEVER leave raw, untranslated Ge'ez numerals in Amharic or English output.\n"
-        "   - When translating from English or Amharic to Ge'ez, translate all numbers into authentic Classical Ge'ez numerals (e.g. '1' -> '፩', '5' -> '፭', '10' -> '፲', '15' -> '፲፭', '100' -> '፻')."
+        "   - When translating from English or Amharic to Ge'ez, translate all numbers into authentic Classical Ge'ez numerals (e.g. '1' -> '፩', '5' -> '፭', '10' -> '፲', '15' -> '፲፭', '100' -> '፻').\n"
+        "7. TARGET LANGUAGE SCRIPT & DIALECT PURITY:\n"
+        "   - When target is Ge'ez (ግዕዝ): output pure Classical Ge'ez (e.g. 'አቡነ ዘበሰማያት ይትቀደስ ስምከ...', NOT Amharic 'አባታችን ሆይ...'). Never confuse Ge'ez with modern Amharic!\n"
+        "   - When target is Amharic (አማርኛ): output natural, idiomatic Amharic.\n"
+        "   - When target is English: output precise, natural English."
     )
 
 
 def prepare_translation_prompt(text, source, target):
     prompt = build_system_prompt(source, target)
     extra_notes = []
+
+    # Detect religious vs secular context
+    if is_religious_context(text):
+        extra_notes.append("Context: Religious / Liturgical — translate with authentic ecclesiastical reverence in the sense of Ethiopian Orthodox Tewahedo Church tradition")
+    else:
+        extra_notes.append("Context: General / Secular prose — translate naturally without unneeded religious terms")
+
     if re.search(r'[፩-፼]', text):
         mappings = extract_geez_number_mappings(text)
         if mappings:
