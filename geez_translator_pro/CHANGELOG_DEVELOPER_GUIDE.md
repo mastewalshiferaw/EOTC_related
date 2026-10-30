@@ -333,6 +333,18 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `95878c5`
+* **Title**: `refactor(ui): remove generic icons from action buttons for clean minimalist interface`
+* **Files Modified**: `frontend/app/page.tsx`, `frontend/app/components/ImageCropModal.tsx`
+* **What Changed**:
+  - Removed generic decorative icons (`SparkleIcon` from Translate button, `UploadImageIcon` from Upload button, `CopyIcon`/`CheckIcon` from Copy button).
+  - Removed decorative icons (`CropIcon`, `ExpandIcon`, `CloseIcon`) from `ImageCropModal.tsx` action controls.
+  - Retained purely functional indicators (loading spinner during active async requests, swap icon for language interchange, and sun/moon for theme mode).
+* **What Did NOT Change**: Button handlers, accessibility attributes, API integration, and styling dimensions.
+* **Why**: Cluttering action buttons with generic AI sparkle icons and image glyphs degraded visual clarity and gave an amateur look. Typography-first buttons provide a more professional, modern, and focused philological workspace.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
