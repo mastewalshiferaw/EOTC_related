@@ -1,4 +1,5 @@
 import os
+import re
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -30,15 +31,34 @@ def get_groq_client():
     return _groq_client
 
 
+def sanitize_translation_text(text):
+    """
+    Cleans up common LLM artifacts:
+    1. Removes degenerate repeating loops (consecutive duplicate phrases/sentences).
+    2. Strips conversational preambles (e.g., 'እነሆ ትርጉሙ:', 'Here is the translation:').
+    """
+    if not text:
+        return ""
+    # Remove consecutive repeating phrases/sentences (at least 6 chars repeated 2+ times)
+    pattern = r'(.{6,}?)\s*(?:\1\s*){2,}'
+    cleaned = re.sub(pattern, r'\1 ', text)
+    # Strip conversational preambles
+    cleaned = re.sub(r'^(?:እነሆ\s*ትርጉሙ|ትርጉም|Translation|Here is the translation)\s*[:፡\-]*\s*', '', cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
 def build_system_prompt(source, target):
     return (
-        f"You are an expert scholar and translator specializing in Classical Ge'ez (ግዕዝ), "
-        f"Amharic (አማርኛ), and English. "
-        f"Translate the following text accurately from {source} into natural, high-quality {target}. "
-        "Rules:\n"
-        "- Clean up minor OCR noise, misread punctuation, or broken characters.\n"
-        "- Translate full sentences, prayers, or paragraphs faithfully.\n"
-        "- Output ONLY the final translation without explanations, introductory remarks, or quotes."
+        f"You are a revered linguist and master translator of Ethiopian languages, specializing in Classical Ge'ez (ግዕዝ), "
+        f"Amharic (አማርኛ), and English.\n"
+        f"Your task is to translate the provided text from {source} into natural, elegant, culturally authentic {target}.\n"
+        "Strict Guidelines:\n"
+        f"1. Output ONLY the direct {target} translation. Never include preambles, introductory filler, or notes.\n"
+        "2. For liturgical or sacred prayers, use standard, reverent phrasing faithful to Ethiopian Orthodox Tewahedo Church (EOTC) tradition "
+        "(e.g. 'አቡነ ዘበሰማያት' -> 'አባታችን ሆይ በሰማያት የምትኖር...', 'በሰላመ ቅዱስ ገብርኤል' -> 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ በመልአኩ በቅዱስ ገብርኤል ሰላምታ...').\n"
+        "3. Translate full thoughts coherently into natural, flowing sentences. Avoid robotic literal glossing.\n"
+        "4. Do NOT repeat words, phrases, or conversational sentences.\n"
+        "5. Preserve original prayer stanza line breaks and authentic Fidel punctuation."
     )
 
 
@@ -48,15 +68,17 @@ def translate_with_gemini(text, source, target):
         raise ValueError("Gemini API key is missing or invalid.")
     model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     prompt = build_system_prompt(source, target)
+    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
     response = client.models.generate_content(
         model=model,
-        contents=text,
+        contents=user_content,
         config=types.GenerateContentConfig(
             system_instruction=prompt,
-            temperature=0.3,
+            temperature=0.2,
         ),
     )
-    return response.text.strip() if response.text else ""
+    res = response.text.strip() if response.text else ""
+    return sanitize_translation_text(res)
 
 
 def translate_with_groq(text, source, target):
@@ -65,18 +87,21 @@ def translate_with_groq(text, source, target):
         raise ValueError("Groq API key is missing.")
     model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
     prompt = build_system_prompt(source, target)
+    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
     response = client.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": prompt},
-            {"role": "user", "content": text},
+            {"role": "user", "content": user_content},
         ],
-        temperature=0.3,
+        temperature=0.2,
+        presence_penalty=0.5,
+        frequency_penalty=0.5,
         max_tokens=1000,
     )
     msg = response.choices[0].message
     content = msg.content or ""
-    return content.strip()
+    return sanitize_translation_text(content)
 
 
 def translate_flexible(text, source, target, provider=None):

@@ -104,13 +104,16 @@ def restore_fidel_ocr_text(raw_text, provider=None):
         groq_client = get_groq_client()
         if groq_client:
             groq_model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
+            user_content = f"Raw optical Fidel OCR to restore:\n\"\"\"\n{raw_text}\n\"\"\"\n\nCanonical Fidel text:"
             resp = groq_client.chat.completions.create(
                 model=groq_model,
                 messages=[
                     {"role": "system", "content": prompt},
-                    {"role": "user", "content": raw_text}
+                    {"role": "user", "content": user_content}
                 ],
                 temperature=0.1,
+                presence_penalty=0.4,
+                frequency_penalty=0.4,
                 max_tokens=600
             )
             content = resp.choices[0].message.content or ""
