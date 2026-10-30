@@ -139,17 +139,85 @@ export default function MasGeezTranslator() {
     if (!inputText.trim()) return;
     setLoading(true);
     setStatusMessage("Translating...");
+    setOutputText(""); // Clear previous translation to begin streaming live
+
     try {
-      const res = await axios.post(`${API_BASE}/api/translate-flexible/`, {
-        text: inputText,
-        source: sourceLang,
-        target: targetLang,
+      const response = await fetch(`${API_BASE}/api/translate-flexible-stream/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: inputText,
+          source: sourceLang,
+          target: targetLang,
+        }),
       });
-      setOutputText(res.data.translation || "");
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          const raw = trimmed.slice(6);
+          if (raw === '[DONE]') {
+            break;
+          }
+          try {
+            const data = JSON.parse(raw);
+            if (data.chunk) {
+              setOutputText((prev) => prev + data.chunk);
+            } else if (data.error) {
+              console.error('Stream error:', data.error);
+              setStatusMessage('Error');
+            }
+          } catch {
+            // Ignore non-json chunk
+          }
+        }
+      }
+
+      if (buffer.trim().startsWith('data: ')) {
+        const raw = buffer.trim().slice(6);
+        if (raw !== '[DONE]') {
+          try {
+            const data = JSON.parse(raw);
+            if (data.chunk) {
+              setOutputText((prev) => prev + data.chunk);
+            }
+          } catch {}
+        }
+      }
+
       setStatusMessage("Done");
     } catch (err: any) {
-      console.error(err);
-      setStatusMessage("Failed");
+      console.error('Streaming error, falling back to batch API:', err);
+      try {
+        const fallbackRes = await axios.post(`${API_BASE}/api/translate-flexible/`, {
+          text: inputText,
+          source: sourceLang,
+          target: targetLang,
+        });
+        setOutputText(fallbackRes.data.translation || "");
+        setStatusMessage("Done");
+      } catch (fallbackErr: any) {
+        console.error('Fallback error:', fallbackErr);
+        setStatusMessage("Failed");
+      }
     } finally {
       setLoading(false);
     }

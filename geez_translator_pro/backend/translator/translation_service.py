@@ -141,3 +141,85 @@ def translate_flexible(text, source, target, provider=None):
                 return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
 
     return translated_result
+
+
+def translate_stream_with_gemini(text, source, target):
+    client = get_gemini_client()
+    if not client:
+        raise ValueError("Gemini API key is missing or invalid.")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    prompt = build_system_prompt(source, target)
+    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    response_stream = client.models.generate_content_stream(
+        model=model,
+        contents=user_content,
+        config=types.GenerateContentConfig(
+            system_instruction=prompt,
+            temperature=0.2,
+        ),
+    )
+    for chunk in response_stream:
+        if chunk.text:
+            yield chunk.text
+
+
+def translate_stream_with_groq(text, source, target):
+    client = get_groq_client()
+    if not client:
+        raise ValueError("Groq API key is missing.")
+    model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
+    prompt = build_system_prompt(source, target)
+    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    stream = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_content},
+        ],
+        temperature=0.2,
+        presence_penalty=0.5,
+        frequency_penalty=0.5,
+        max_tokens=1000,
+        stream=True,
+    )
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
+        if delta:
+            yield delta
+
+
+def translate_stream_flexible(text, source, target, provider=None):
+    """
+    Streaming generator for live translation:
+    - Yields text tokens/chunks in real time
+    - Supports Gemini and Groq with automatic fallback
+    """
+    if not text or not text.strip():
+        return
+
+    cleaned_text = text.strip()
+    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
+
+    if preferred_provider == "groq":
+        try:
+            for chunk in translate_stream_with_groq(cleaned_text, source, target):
+                yield chunk
+        except Exception as e:
+            print(f"Groq stream error ({e}), attempting Gemini fallback...")
+            try:
+                for chunk in translate_stream_with_gemini(cleaned_text, source, target):
+                    yield chunk
+            except Exception as e2:
+                yield f"\n[Translation Error: {str(e)} | Fallback: {str(e2)}]"
+    else:
+        try:
+            for chunk in translate_stream_with_gemini(cleaned_text, source, target):
+                yield chunk
+        except Exception as e:
+            print(f"Gemini stream error ({e}), attempting Groq fallback...")
+            try:
+                for chunk in translate_stream_with_groq(cleaned_text, source, target):
+                    yield chunk
+            except Exception as e2:
+                yield f"\n[Translation Error: {str(e)} | Fallback: {str(e2)}]"
+
