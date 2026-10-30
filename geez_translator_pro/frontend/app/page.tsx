@@ -33,41 +33,6 @@ function SwapIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
-function UploadImageIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-      <circle cx="9" cy="9" r="2" />
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-    </svg>
-  );
-}
-
-function SparkleIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-    </svg>
-  );
-}
-
-function CopyIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
 function SpinnerIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -310,10 +275,9 @@ export default function MasGeezTranslator() {
                 <button 
                   type="button" 
                   onClick={() => fileInputRef.current?.click()}
-                  className={`shrink-0 text-xs font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border transition flex items-center gap-1.5 ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
+                  className={`shrink-0 text-xs font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border transition ${isDark ? 'border-zinc-700 bg-zinc-800/70 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:text-black shadow-sm'}`}
                 >
-                  <UploadImageIcon className="w-3.5 h-3.5" />
-                  <span>Upload</span>
+                  Upload
                 </button>
 
                 <div className="flex items-center gap-1 min-w-0">
@@ -328,9 +292,9 @@ export default function MasGeezTranslator() {
               <button 
                 onClick={handleTranslate} 
                 disabled={loading || !inputText.trim()}
-                className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-1.5 sm:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
+                className={`shrink-0 flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition disabled:opacity-40 disabled:cursor-not-allowed ${isDark ? 'bg-zinc-100 text-zinc-900 hover:bg-white shadow-md' : 'bg-zinc-900 text-white hover:bg-black shadow-sm'}`}
               >
-                {loading ? <SpinnerIcon className="w-3.5 h-3.5" /> : <SparkleIcon className="w-3.5 h-3.5" />}
+                {loading && <SpinnerIcon className="w-3.5 h-3.5" />}
                 <span>{loading ? "Translating" : "Translate"}</span>
               </button>
             </div>
@@ -353,19 +317,9 @@ export default function MasGeezTranslator() {
                 {/* Copy Button */}
                 <button 
                   onClick={handleCopy} 
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'}`}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${isDark ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-700' : 'border-zinc-300 bg-white text-zinc-700 hover:text-black hover:bg-zinc-100 shadow-sm'} ${copied ? 'text-emerald-500 font-medium' : ''}`}
                 >
-                  {copied ? (
-                    <>
-                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-emerald-500 font-medium">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <CopyIcon className="w-3.5 h-3.5" />
-                      <span>Copy</span>
-                    </>
-                  )}
+                  {copied ? "Copied" : "Copy"}
                 </button>
               </div>
             )}
