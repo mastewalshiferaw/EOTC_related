@@ -24,9 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-4i#sp1!dasqo2$om(p+f0tlc8s9*!#44c@wc5-(+-t$fr((+r&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*'] if DEBUG else [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
+render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
 
 
 # Application definition

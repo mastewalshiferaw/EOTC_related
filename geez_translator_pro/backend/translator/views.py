@@ -1,8 +1,60 @@
 import os
+import shutil
+from datetime import datetime, timezone
+from django.db import connection
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .services import perform_hybrid_ocr, restore_fidel_ocr_text
 from .translation_service import translate_flexible
+
+class HealthCheckView(APIView):
+    """
+    Render Health Check Endpoint:
+    Returns 200 OK with system diagnostic info (DB connectivity, OCR status, LLM provider).
+    Used by Render's automated health check probe to confirm zero-downtime deployment readiness.
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        health_data = {
+            "status": "healthy",
+            "service": "masgeez-translator-backend",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "environment": {
+                "active_llm_provider": os.getenv("LLM_PROVIDER", "gemini"),
+                "gemini_configured": bool(os.getenv("GEMINI_API_KEY") and os.getenv("GEMINI_API_KEY") != "your_gemini_api_key_here"),
+                "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+            },
+            "checks": {
+                "database": "unknown",
+                "tesseract_ocr": "unknown"
+            }
+        }
+
+        # 1. Database Check
+        try:
+            connection.ensure_connection()
+            health_data["checks"]["database"] = "connected"
+        except Exception as db_err:
+            health_data["status"] = "unhealthy"
+            health_data["checks"]["database"] = f"error: {str(db_err)}"
+            return Response(health_data, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        # 2. Local Tesseract Check
+        try:
+            import pytesseract
+            tess_cmd = getattr(pytesseract.pytesseract, 'tesseract_cmd', 'tesseract')
+            if os.path.isfile(tess_cmd) or shutil.which(tess_cmd) or shutil.which('tesseract'):
+                health_data["checks"]["tesseract_ocr"] = "available"
+            else:
+                health_data["checks"]["tesseract_ocr"] = "fallback_to_cloud_vision"
+        except Exception:
+            health_data["checks"]["tesseract_ocr"] = "fallback_to_cloud_vision"
+
+        return Response(health_data, status=status.HTTP_200_OK)
+
 
 class OCROnlyView(APIView):
     def post(self, request):
