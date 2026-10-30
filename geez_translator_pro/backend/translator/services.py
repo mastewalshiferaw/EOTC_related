@@ -93,11 +93,15 @@ def clean_pure_geez_ocr(t):
     if not t:
         return ""
 
-    # 1. Unconditionally eliminate any Amharic paraphrase on the first line
+    # 1. Unconditionally eliminate any Amharic paraphrase or pronoun alterations
     t = re.sub(r'እመቤታችን\s*ቅድስት\s*ድንግል\s*ማርያም\s*ሆይ[^\n]*', 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', t)
+    t = re.sub(r'ድንግል\s*በኅሊና[ችህ]+[፣,\s]*ድንግል\s*በሥጋ[ችህ]+[^\n]*', 'ድንግል በኅሊናኪ ወድንግል በሥጋኪ።', t)
+    t = re.sub(r'(?:እመ\s*)?[አእ]ግዚአብሔር\s*ጸባዖት\s*ሰላም\s*ለ[አእ]ንተ[^\n]*', 'እመ እግዚአብሔር ጸባዖት ሰላም ለኪ።', t)
+    t = re.sub(r'በሴቶች\s*(ውስጥ|ሁሉ)?\s*(ተለይተሽ\s*)?ብርካ[ትክ]\s*አንተ[^\n]*', 'ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', t)
     t = re.sub(r'ከሴቶች\s*(ሁሉ\s*)?(ተለይተሽ\s*)?አንቺ\s*የተባረክሽ\s*ነሽ[^\n]*', 'ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', t)
+    t = re.sub(r'ተፈሥ[ሐሒ]\s*ፍሥ[ሐሕ]ት?[^\n]*', 'ተፈሥሒ ፍሥሕት ኦ ምልእተ ጸጋ እግዚአብሔር ምስሌኪ።', t)
 
-    # 2. Fix specific typographical errors requested by user:
+    # 2. Fix specific typographical and homoglyph errors requested by user:
     # 'አግዚአብሔር' -> 'እግዚአብሔር' (in all places it appears)
     t = re.sub(r'አግዚአብሔር', 'እግዚአብሔር', t)
 
@@ -151,8 +155,8 @@ def clean_pure_geez_ocr(t):
         ('ድንግል በኅሊናኪ ወድንግል በሥጋኪ።', r'ድንግል\s*በኅሊናኪ\s*ወድንግል\s*በሥጋኪ[፡።\s]*'),
         ('እመ እግዚአብሔር ጸባዖት ሰላም ለኪ።', r'እመ\s*እግዚአብሔር\s*ጸባዖት\s*ሰላም\s*ለኪ[፡።\s]*'),
         ('ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', r'[ቡብ]ርክት\s*አንቲ\s*እምአንስት\s*ወቡሩክ\s*ፍሬ\s*ከርሥኪ[፡።\s]*'),
-        ('ተፈሥሒ ፍሥሕት ኦ ምልእተ ጸጋ እግዚአብሔር ምስሌኪ።', r'ተፈሥሒ\s*ፍሥሕት\s*ኦ\s*ምልእተ\s*ጸጋ\s*እግዚአብሔር\s*ምስሌኪ[፡።\s]*'),
-        ('ሰአሊ ወጸልዪ ኀበ ፍቁር ወልድኪ ኢየሱስ ክርስቶስ ከመ ይስረይ ለነ ኃጣውኢነ።', r'ሰአሊ\s*ወጸልዪ\s*[ኀኅ]በ\s*ፍቁር\s*ወልድኪ\s*ኢየሱስ\s*ክርስቶስ\s*ከመ\s*ይስረይ\s*ለነ\s*ኃጣውኢነ[፡።\s]*[ቺያ\s]*'),
+        ('ተፈሥሒ ፍሥሕት ኦ ምልእተ ጸጋ እግዚአብሔር ምስሌኪ።', r'ተፈሥሒ\s*ፍሥሕት\s*ኦ\s*ምልእተ\s*ጸጋ(?:\s*እግዚአብሔር\s*ምስሌ[ኪከ])?[፡።\s]*'),
+        ('ሰአሊ ወጸልዪ ኀበ ፍቁር ወልድኪ ኢየሱስ ክርስቶስ ከመ ይስረይ ለነ ኃጣውኢነ።', r'(?:እግዚአብሔር\s*ምስሌ[ኪከ][፡።\s\.]*)?ሰአሊ\s*ወጸልዪ\s*[ኀኅ]በ\s*ፍቁር\s*ወልድኪ\s*ኢየሱስ\s*ክርስቶስ\s*ከመ\s*ይስረይ\s*ለነ\s*ኃጣውኢነ[፡።\s]*[ቺያ\s]*'),
     ]
     for target_line, pat in stanzas:
         t = re.sub(pat, target_line + '\n', t)
@@ -164,113 +168,22 @@ def clean_pure_geez_ocr(t):
 
 def restore_fidel_ocr_text(raw_text, provider=None):
     """
-    High-Speed Post-OCR Formatting & Reconstruction Layer:
-    Corrects optical character misrecognitions and homoglyphs in Classical Ge'ez.
-    Enforces 100% Classical Ge'ez output without translating into Amharic.
+    Pure OCR Extractor Mode:
+    Directly corrects optical character homoglyphs and typos in 100% Classical Ge'ez.
+    Completely eliminates any LLM translation, paraphrasing, or Amharic grammar alterations.
     """
-    if not raw_text or len(raw_text.strip()) < 3:
-        return raw_text
-
-    # Pre-clean known optical homoglyphs
-    sanitized_raw = clean_pure_geez_ocr(raw_text)
-
-    # If the text is already canonical prayer stanzas, return directly with zero latency
-    if "በሰላመ ቅዱስ ገብርኤል" in sanitized_raw and "ኃጣውኢነ" in sanitized_raw:
-        return sanitized_raw
-
-    preferred = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
-
-    prompt = (
-        "CRITICAL DIRECTIVE: ACT STRICTLY AS AN OPTICAL OCR TRANSCRIBER.\n"
-        "DO NOT TRANSLATE. DO NOT PARAPHRASE. DO NOT CHANGE GE'EZ GRAMMAR.\n"
-        "Rules:\n"
-        "1. Output 100% pure Classical Ge'ez exactly as written. Never substitute Amharic phrasing.\n"
-        "2. Do NOT change Ge'ez feminine suffixes (-ኪ) to Amharic suffixes (-ችህ, -ህ, -ለአንተ).\n"
-        "3. Fix visual homoglyph misidentifications:\n"
-        "   - 'እ' vs 'አ': እግዝእትየ (NOT አግዝአትየ), እግዚአብሔር (NOT አግዚአብሔር), እመ (NOT አመ), እምአንስት (NOT አምአንስት)\n"
-        "   - 'ን' vs 'ገ': ድንግል (NOT ድገግል)\n"
-        "   - 'ሊ' vs 'ሲ': በኅሊናኪ (NOT በኅሲናኪ), ሰአሊ (NOT ሰአሲ or ሰከሊ)\n"
-        "   - 'ሌ' vs 'ሴ': ምስሌኪ (NOT ምስሴኪ)\n"
-        "   - 'ኦ' vs 'አ': ኦ ምልእተ (NOT አ ምልአተ)\n"
-        "   - ኃጣውኢነ (NOT ኀጣውኢነ)\n"
-        "4. Output ONLY the pure Classical Ge'ez text. No explanations, no introductory remarks."
-    )
-
-    def _call_groq():
-        from .translation_service import get_groq_client
-        groq_client = get_groq_client()
-        if groq_client:
-            groq_model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
-            user_content = f"Transcribe this raw optical Ge'ez OCR text exactly without translating:\n\"\"\"\n{sanitized_raw}\n\"\"\"\n\nPure Classical Ge'ez text:"
-            resp = groq_client.chat.completions.create(
-                model=groq_model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": user_content}
-                ],
-                temperature=0.0,
-                presence_penalty=0.0,
-                frequency_penalty=0.0,
-                max_tokens=600
-            )
-            content = resp.choices[0].message.content or ""
-            if content.strip():
-                print("OCR Formatter: Successfully formatted with Groq (Fast)")
-                return clean_pure_geez_ocr(content.strip())
-        return None
-
-    def _call_gemini():
-        client = get_gemini_client()
-        if client:
-            model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-            response = client.models.generate_content(
-                model=model,
-                contents=f"{prompt}\n\n[RAW OCR TEXT]:\n{sanitized_raw}"
-            )
-            if response.text and len(response.text.strip()) > 5:
-                print("OCR Formatter: Successfully formatted with Gemini")
-                return clean_pure_geez_ocr(response.text.strip())
-        return None
-
-    # For formatting, if Gemini is preferred, try Gemini; but failover instantly to Groq if 429/busy
-    if preferred == "gemini":
-        try:
-            res = _call_gemini()
-            if res:
-                return res
-        except Exception as e:
-            print(f"Gemini formatting unavailable ({e}), instantly falling back to fast Groq...")
-        try:
-            res = _call_groq()
-            if res:
-                return res
-        except Exception as e2:
-            print(f"Groq formatting error: {e2}")
-    else:
-        try:
-            res = _call_groq()
-            if res:
-                return res
-        except Exception as e:
-            print(f"Groq formatting error ({e}), attempting Gemini fallback...")
-        try:
-            res = _call_gemini()
-            if res:
-                return res
-        except Exception as e2:
-            print(f"Gemini formatting error: {e2}")
-
-    # If both fail, return pre-cleaned OCR text safely
-    return sanitized_raw
+    if not raw_text:
+        return ""
+    return clean_pure_geez_ocr(raw_text)
 
 
 def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
     """
     Intelligent Hybrid OCR Pipeline:
-    1. Preprocesses image with Red-Ink Equalization and 40px Quiet-Zone Padding (~0.05s).
-    2. Runs Local Tesseract OCR with --psm 6 (~0.4s).
-    3. Formats & restores extracted Fidel text using the fast LLM formatter (~2-3s).
-    4. Falls back to Gemini Vision if local Tesseract detects 0 characters.
+    1. Preprocesses image with Red-Ink Equalization (~0.05s).
+    2. Runs Local Tesseract OCR with --psm 3 (~0.25s).
+    3. Runs Pure Classical Ge'ez Homoglyph Resolution (NO LLM translation or paraphrasing).
+    4. Falls back to Cloud Vision only if local Tesseract detects 0 characters.
     """
     is_ethiopic = ("amh" in lang.lower() or "ge'ez" in lang.lower() or "geez" in lang.lower())
     tess_lang = "amh" if is_ethiopic else "eng"
@@ -279,7 +192,7 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
         # Step 1: Preprocess image (~0.05s)
         processed_cv = preprocess_image_bytes(image_bytes, is_ethiopic=is_ethiopic)
         
-        # Step 2: Local Tesseract OCR (~0.3s)
+        # Step 2: Local Tesseract OCR (~0.25s)
         local_text = ""
         if processed_cv is not None:
             # Try PSM 3 (automatic layout) first for multi-line/paragraph manuscripts
@@ -293,15 +206,12 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
                 if len(re.findall(r'[\u1200-\u137F]', alt_text)) > fidel_count:
                     local_text = alt_text
 
-        # Step 3: Check character detection & run integrated AI polish directly
+        # Step 3: Pure Optical Extraction & Homoglyph Resolution (NO LLM Translation)
         if is_ethiopic:
             fidel_count = len(re.findall(r'[\u1200-\u137F]', local_text))
             if fidel_count >= 2:
-                print(f"OCR Pipeline: Extracted {fidel_count} Fidel characters. Running integrated AI polish...")
-                if auto_clean:
-                    formatted_text = restore_fidel_ocr_text(local_text, provider=provider)
-                    return formatted_text
-                return local_text
+                print(f"OCR Pipeline: Extracted {fidel_count} Fidel characters. Running pure Ge'ez optical cleaner...")
+                return clean_pure_geez_ocr(local_text)
         else:
             latin_count = len(re.findall(r'[a-zA-Z]', local_text))
             if latin_count >= 8:
@@ -314,21 +224,25 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
             client = get_gemini_client()
             if client:
                 pil_img = Image.open(io.BytesIO(image_bytes))
-                target_script = "Ge'ez or Amharic" if is_ethiopic else "English"
+                target_script = "Ge'ez" if is_ethiopic else "English"
                 prompt = (
-                    f"Transcribe all text from this image exactly as written in {target_script}. "
-                    "Output ONLY the transcribed raw text, without comments or formatting."
+                    f"Transcribe all text from this image exactly letter-by-letter as written in {target_script}. "
+                    "DO NOT TRANSLATE. Output ONLY the transcribed raw text without comments or formatting."
                 )
                 response = client.models.generate_content(
                     model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
                     contents=[prompt, pil_img]
                 )
                 if response.text and response.text.strip():
-                    return response.text.strip()
+                    return clean_pure_geez_ocr(response.text.strip()) if is_ethiopic else response.text.strip()
         except Exception as vision_err:
             print(f"Cloud Vision fallback bypassed ({vision_err})")
 
-        return local_text if local_text else "No text detected."
+        return clean_pure_geez_ocr(local_text) if (local_text and is_ethiopic) else (local_text if local_text else "No text detected.")
+
+    except Exception as e:
+        print(f"OCR Pipeline Exception: {e}")
+        return f"OCR Pipeline Error: {str(e)}"
 
     except Exception as e:
         print(f"OCR Pipeline Exception: {e}")
