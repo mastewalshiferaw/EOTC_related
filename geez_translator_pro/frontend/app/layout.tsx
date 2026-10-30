@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gez.AI Studio",
-  description: "Advanced Ge'ez Philology Workspace",
+  title: "አስተርእየ ቃል",
+  description: "አስተርእየ ቃል - Ge'ez Translator Pro",
 };
 
 export default function RootLayout({

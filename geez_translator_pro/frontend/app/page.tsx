@@ -253,8 +253,8 @@ export default function MasGeezTranslator() {
       {/* Top Navbar */}
       <nav className={`w-full max-w-5xl mx-auto px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center border-b ${navBorder}`}>
         <div className="flex items-center gap-2 sm:gap-2.5">
-          <span className={`font-black text-xl sm:text-2xl tracking-tighter uppercase italic ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-            MAS_GEEZ
+          <span className={`font-black text-xl sm:text-2xl tracking-tight ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+            አስተርእየ ቃል
           </span>
           <span className={`text-[9px] sm:text-[10px] border px-1.5 sm:px-2 py-0.5 rounded font-bold tracking-widest uppercase ${isDark ? 'border-zinc-700 text-zinc-400 bg-zinc-900' : 'border-zinc-300 text-zinc-600 bg-zinc-100'}`}>
             Translator Pro
@@ -407,7 +407,7 @@ export default function MasGeezTranslator() {
       )}
 
       <footer className={`py-4 sm:py-6 w-full text-center text-[9px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
-        MAS_GEEZ Digital Philology
+        አስተርእየ ቃል Digital Philology
       </footer>
     </div>
   );
