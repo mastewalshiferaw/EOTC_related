@@ -93,36 +93,47 @@ def clean_pure_geez_ocr(t):
     if not t:
         return ""
 
-    # Revert any accidental Amharic translations or paraphrases to original pure Ge'ez
-    t = re.sub(r'እመቤታችን\s+ቅድስት\s+ድንግል\s+ማርያም\s+ሆይ[^\n።]*', 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', t)
-    t = re.sub(r'ከሴቶች\s*(ሁሉ\s*)?(ተለይተሽ\s*)?አንቺ\s*የተባረክሽ\s*ነሽ[^\n።]*', 'ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', t)
+    # 1. Unconditionally eliminate any Amharic paraphrase on the first line
+    t = re.sub(r'እመቤታችን\s*ቅድስት\s*ድንግል\s*ማርያም\s*ሆይ[^\n]*', 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', t)
+    t = re.sub(r'ከሴቶች\s*(ሁሉ\s*)?(ተለይተሽ\s*)?አንቺ\s*የተባረክሽ\s*ነሽ[^\n]*', 'ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', t)
 
-    # 1. Optical homoglyph corrections ('እ' vs 'አ')
-    t = re.sub(r'አግዝ[አእ]ትየ', 'እግዝእትየ', t)
+    # 2. Fix specific typographical errors requested by user:
+    # 'አግዚአብሔር' -> 'እግዚአብሔር' (in all places it appears)
     t = re.sub(r'አግዚአብሔር', 'እግዚአብሔር', t)
+
+    # 'አነቲ' -> 'አንቲ'
+    t = re.sub(r'\bአነቲ\b', 'አንቲ', t)
+
+    # 'ወጸልዩ' -> 'ወጸልዪ'
+    t = re.sub(r'\bወጸል[ዩዬይ]\b', 'ወጸልዪ', t)
+
+    # 'በኅሊናኪ፣ ድንግል' -> 'በኅሊናኪ ወድንግል' (remove comma, enforce 'ወ')
+    t = re.sub(r'በኅሊናኪ[፣,\s]+(ወ)?ድንግል', 'በኅሊናኪ ወድንግል', t)
+
+    # 3. Optical homoglyph corrections ('እ' vs 'አ')
+    t = re.sub(r'አግዝ[አእ]ትየ', 'እግዝእትየ', t)
     t = re.sub(r'\bአመ\s+(?=እግዚአብሔር)', 'እመ ', t)
     t = re.sub(r'አምአንስት', 'እምአንስት', t)
     t = re.sub(r'እም\s+አንስት', 'እምአንስት', t)
 
-    # 2. 'ን' vs 'ገ'
+    # 4. 'ን' vs 'ገ'
     t = re.sub(r'ድገግል', 'ድንግል', t)
 
-    # 3. 'ሊ' vs 'ሲ'
+    # 5. 'ሊ' vs 'ሲ'
     t = re.sub(r'በኅሲናኪ', 'በኅሊናኪ', t)
     t = re.sub(r'[ሰሸ][አከ][ሲከ]', 'ሰአሊ', t)
 
-    # 4. 'ሌ' vs 'ሴ' / 'ከ' vs 'ኪ'
+    # 6. 'ሌ' vs 'ሴ' / 'ከ' vs 'ኪ'
     t = re.sub(r'ምስ[ሴሌ]{1,2}[ከኪ]', 'ምስሌኪ', t)
 
-    # 5. 'ኦ' vs 'አ'
+    # 7. 'ኦ' vs 'አ'
     t = re.sub(r'ኦ[ሶኮ0-9]+', 'ኦ', t)
     t = re.sub(r'[አኦ]\s*ምል[አእ]ተ', 'ኦ ምልእተ', t)
     t = re.sub(r'ምልአተ\s+ጸጋ', 'ምልእተ ጸጋ', t)
 
-    # 6. Specific Classical Ge'ez prayer words
+    # 8. Specific Classical Ge'ez prayer words
     t = re.sub(r'\bብሰላመ\b', 'በሰላመ', t)
     t = re.sub(r'\bቡርክት\b', 'ብርክት', t)
-    t = re.sub(r'ወጸል[ዬይ]', 'ወጸልዪ', t)
     t = re.sub(r'ክመ\s*[ዜይ]\s*ስረይ', 'ከመ ይስረይ', t)
     t = re.sub(r'ኀጣውኢነ', 'ኃጣውኢነ', t)
     t = re.sub(r'[’\'‘]ቡነ', 'አቡነ', t)
