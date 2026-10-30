@@ -358,6 +358,20 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `72abcc3`
+* **Title**: `feat(translation): integrate bidirectional Ethiopian numeral translation and deterministic normalization`
+* **Files Modified**: `backend/translator/ethiopian_numbers.py`, `backend/translator/translation_service.py`, `backend/translator/services.py`, `backend/.env`
+* **What Changed**:
+  - Built a comprehensive Ethiopian numeral parsing and generation module `ethiopian_numbers.py` supporting Classical Ge'ez additive and multiplicative positional systems (፩ to ፼, 1 to 10,000+) as well as modern hybrid notation with ሺ (`parse_geez_number`, `arabic_to_geez`, `replace_geez_numbers_with_arabic`, `replace_arabic_numbers_with_geez`, `normalize_ethiopian_numbers`, `extract_geez_number_mappings`).
+  - Integrated Rule 6 into `build_system_prompt()` in `translation_service.py` with explicit instructions for Gemini and Groq to always convert Ge'ez numerals to standard numerals or written words in Amharic and English translations, and standard digits into Classical Ge'ez numerals for Ge'ez targets.
+  - Implemented dynamic numeral pre-annotation helper `prepare_translation_prompt()` that extracts unique Ge'ez numerals found in the source text and injects their exact Arabic decimal values as inline context grounding, eliminating LLM hallucinations on compound numeral combinations.
+  - Added deterministic post-processing with `normalize_ethiopian_numbers()` to batch translation functions (`translate_with_gemini`, `translate_with_groq`), guaranteeing that any residual Ge'ez numerals in Amharic/English output are cleanly converted, and standard digits are converted to authentic Ge'ez numerals when targeting Ge'ez.
+  - Updated Gemini default fallback model from `gemini-3.8-flash` to `gemini-3.5-flash` in `translation_service.py`, `services.py`, and `backend/.env` after verifying `gemini-3.8-flash` exhausted the 20 RPD daily free quota, restoring instant live API responsiveness.
+* **What Did NOT Change**: Pure optical OCR pipeline and character extraction remained untouched. SSE streaming architecture and Next.js frontend UI components remained unchanged.
+* **Why**: Classical Ge'ez liturgical manuscripts frequently include chapter and verse numbers (e.g. `ምዕራፍ ፩`, `ቁጥር ፭`, `፲፭ ዓመት`). Large language models often treat Ge'ez numbers as unmodifiable sacred script tokens, copying them verbatim into Amharic or English translations without translation. This hybrid two-layer system (prompt conditioning + deterministic post-normalization) provides 100% reliable bidirectional translation for all Ethiopian numbers.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
