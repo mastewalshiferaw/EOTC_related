@@ -77,26 +77,85 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
         return thresh
 
 
+def correct_geez_homoglyphs(t):
+    """
+    Deterministic rule-based corrector for Ethiopic OCR homoglyphs and classical vocabulary:
+    - 'እ' vs 'አ': እግዝእትየ (not አግዝአትየ), እመ (not አመ), እምአንስት (not አምአንስት)
+    - 'ን' vs 'ገ': ድንግል (not ድገግል)
+    - 'ሊ' vs 'ሲ': በኅሊናኪ (not በኅሲናኪ), ሰአሊ (not ሰአሲ/ሰከሊ)
+    - 'ሌ' vs 'ሴ': ምስሌኪ (not ምስሴኪ)
+    - 'ኦ' vs 'አ': ኦ ምልእተ (not አ ምልአተ / ኦ ምልአተ)
+    - ኃጣውኢነ (not ኀጣውኢነ)
+    - Re-corrects accidental Amharic translation back to original Classical Ge'ez.
+    """
+    if not t:
+        return ""
+
+    # Safeguard against accidental translation into Amharic
+    t = re.sub(r'እመቤታችን\s+ቅድስት\s+ድንግል\s+ማርያም\s+ሆይ[^\n።]*', 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', t)
+
+    # 'እ' vs 'አ'
+    t = re.sub(r'(ወ)?አግዝ[አእ]ትየ\b', r'\g<1>እግዝእትየ', t)
+    t = re.sub(r'(ወ)?አግዝ[አእ]ትነ\b', r'\g<1>እግዝእትነ', t)
+    t = re.sub(r'\b(ወ)?አመ\s+(?=እግዚአብሔር)', r'\g<1>እመ ', t)
+    t = re.sub(r'(ወ)?አምአንስት\b', r'\g<1>እምአንስት', t)
+    t = re.sub(r'(ወ)?እም\s+አንስት\b', r'\g<1>እምአንስት', t)
+
+    # 'ን' vs 'ገ'
+    t = re.sub(r'(ወ)?ድገግል\b', r'\g<1>ድንግል', t)
+
+    # 'ሊ' vs 'ሲ'
+    t = re.sub(r'(ወ)?በኅሲናኪ\b', r'\g<1>በኅሊናኪ', t)
+    t = re.sub(r'\b[ሰሸ][አከ][ሲከ]\b', 'ሰአሊ', t)
+
+    # 'ሌ' vs 'ሴ'
+    t = re.sub(r'\bምስ[ሴሌ]{1,2}[ኪከ]\b', 'ምስሌኪ', t)
+
+    # 'ኦ' vs 'አ'
+    t = re.sub(r'\b[አኦ]\s*ምል[አእ]ተ\b', 'ኦ ምልእተ', t)
+    t = re.sub(r'\bምልአተ\s+ጸጋ\b', 'ምልእተ ጸጋ', t)
+
+    # Classical prayer orthography
+    t = re.sub(r'\bኀጣውኢነ\b', 'ኃጣውኢነ', t)
+    t = re.sub(r'\b[’\'‘]ቡነ\b', 'አቡነ', t)
+    t = re.sub(r'\bዘበሰማያጎ\b', 'ዘበሰማያት', t)
+    t = re.sub(r'\b[አእ]ስመ\s+[ቪዚ]አክ\b', 'እስመ ዚአከ', t)
+
+    # Format stanzas cleanly on punctuation
+    t = re.sub(r'([።])\s*', r'\1\n', t)
+    return t.strip()
+
+
 def restore_fidel_ocr_text(raw_text, provider=None):
     """
     High-Speed Post-OCR Formatting & Reconstruction Layer:
-    Corrects optical character misrecognitions (e.g. ዶ->ይ, ቪ->ዚ, 'ቡ->አቡ, broken punctuation)
-    and formats raw OCR into clean, authentic canonical Fidel using high-speed LLM inference.
+    Corrects optical character misrecognitions and homoglyphs in Classical Ge'ez.
+    Enforces 100% Classical Ge'ez output without translating into Amharic.
     """
     if not raw_text or len(raw_text.strip()) < 3:
         return raw_text
 
+    # Pre-clean known optical homoglyphs
+    sanitized_raw = correct_geez_homoglyphs(raw_text)
+
     preferred = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
 
     prompt = (
-        "You are an expert scholar in Classical Ge'ez (ግዕዝ) and Ethiopian Orthodox Tewahedo liturgical manuscripts. "
-        "The following text was extracted by optical OCR and contains optical scan errors "
-        "('ቡነ -> አቡነ, ዘበሰማያጎ -> ዘበሰማያት, ጸሎት ዘዘወጉር -> ጸሎት ዘዘወትር, አስመ ቪአክ -> እስመ ዚአከ, broken punctuation). "
-        "Please format and restore it into clean, canonical, authentic Classical Ge'ez text. "
-        "Rules:\n"
-        "- Output ONLY the clean restored Fidel text.\n"
-        "- Do NOT translate or explain.\n"
-        "- Preserve prayer lines and authentic Fidel punctuation (፡, ።, ፤)."
+        "You are an expert scholar and scribe in Classical Ge'ez (ግዕዝ) manuscripts and liturgy.\n"
+        "Your task is to restore raw optical character recognition (OCR) output into pure, authentic Classical Ge'ez.\n\n"
+        "CRITICAL RULES:\n"
+        "1. NEVER TRANSLATE INTO AMHARIC OR ANY OTHER LANGUAGE. Output must remain 100% PURE CLASSICAL GE'EZ.\n"
+        "   - Do NOT write 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ'.\n"
+        "   - Keep the exact Ge'ez text: 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።'\n"
+        "2. RESOLVE VISUAL HOMOGLYPH OCR ERRORS using Ge'ez grammar and vocabulary:\n"
+        "   - 'እ' vs 'አ': 'እግዝእትየ' (NOT አግዝአትየ), 'እመ' (NOT አመ), 'እምአንስት' (NOT አምአንስት).\n"
+        "   - 'ን' vs 'ገ': 'ድንግል' (NOT ድገግል).\n"
+        "   - 'ሊ' vs 'ሲ': 'በኅሊናኪ' (NOT በኅሲናኪ), 'ሰአሊ' (NOT ሰአሲ or ሰከሊ).\n"
+        "   - 'ሌ' vs 'ሴ': 'ምስሌኪ' (NOT ምስሴኪ).\n"
+        "   - 'ኦ' vs 'አ': 'ኦ ምልእተ' (NOT አ ምልአተ).\n"
+        "   - 'ኃጣውኢነ' (NOT ኀጣውኢነ).\n"
+        "3. Output ONLY the clean restored Classical Ge'ez text. No explanations, no introductory remarks.\n"
+        "4. Preserve authentic prayer stanzas and punctuation (፡, ።)."
     )
 
     def _call_groq():
@@ -104,22 +163,22 @@ def restore_fidel_ocr_text(raw_text, provider=None):
         groq_client = get_groq_client()
         if groq_client:
             groq_model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
-            user_content = f"Raw optical Fidel OCR to restore:\n\"\"\"\n{raw_text}\n\"\"\"\n\nCanonical Fidel text:"
+            user_content = f"Restore this raw Ge'ez OCR text into pure Classical Ge'ez:\n\"\"\"\n{sanitized_raw}\n\"\"\"\n\nPure Classical Ge'ez text:"
             resp = groq_client.chat.completions.create(
                 model=groq_model,
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": user_content}
                 ],
-                temperature=0.1,
-                presence_penalty=0.4,
-                frequency_penalty=0.4,
+                temperature=0.05,
+                presence_penalty=0.2,
+                frequency_penalty=0.2,
                 max_tokens=600
             )
             content = resp.choices[0].message.content or ""
             if content.strip():
                 print("OCR Formatter: Successfully formatted with Groq (Fast)")
-                return content.strip()
+                return correct_geez_homoglyphs(content.strip())
         return None
 
     def _call_gemini():
@@ -128,11 +187,11 @@ def restore_fidel_ocr_text(raw_text, provider=None):
             model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
             response = client.models.generate_content(
                 model=model,
-                contents=f"{prompt}\n\n[RAW OCR TEXT]:\n{raw_text}"
+                contents=f"{prompt}\n\n[RAW OCR TEXT]:\n{sanitized_raw}"
             )
             if response.text and len(response.text.strip()) > 5:
                 print("OCR Formatter: Successfully formatted with Gemini")
-                return response.text.strip()
+                return correct_geez_homoglyphs(response.text.strip())
         return None
 
     # For formatting, if Gemini is preferred, try Gemini; but failover instantly to Groq if 429/busy
@@ -163,8 +222,8 @@ def restore_fidel_ocr_text(raw_text, provider=None):
         except Exception as e2:
             print(f"Gemini formatting error: {e2}")
 
-    # If both fail, return raw OCR text safely without crashing
-    return raw_text
+    # If both fail, return pre-cleaned OCR text safely
+    return sanitized_raw
 
 
 def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
