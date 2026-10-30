@@ -230,7 +230,7 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
                     "DO NOT TRANSLATE. Output ONLY the transcribed raw text without comments or formatting."
                 )
                 response = client.models.generate_content(
-                    model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+                    model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
                     contents=[prompt, pil_img]
                 )
                 if response.text and response.text.strip():

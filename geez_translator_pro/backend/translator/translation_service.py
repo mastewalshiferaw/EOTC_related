@@ -4,6 +4,12 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from pathlib import Path
+from .ethiopian_numbers import (
+    normalize_ethiopian_numbers,
+    extract_geez_number_mappings,
+    replace_geez_numbers_with_arabic,
+    replace_arabic_numbers_with_geez,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env', override=True)
@@ -57,17 +63,33 @@ def build_system_prompt(source, target):
         "(e.g. 'አቡነ ዘበሰማያት' -> 'አባታችን ሆይ በሰማያት የምትኖር...', 'በሰላመ ቅዱስ ገብርኤል' -> 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ በመልአኩ በቅዱስ ገብርኤል ሰላምታ...').\n"
         "3. Translate full thoughts coherently into natural, flowing sentences. Avoid robotic literal glossing.\n"
         "4. Do NOT repeat words, phrases, or conversational sentences.\n"
-        "5. Preserve original prayer stanza line breaks and authentic Fidel punctuation."
+        "5. Preserve original prayer stanza line breaks and authentic Fidel punctuation.\n"
+        "6. ETHIOPIAN / GE'EZ NUMERAL TRANSLATION RULES:\n"
+        "   - Classical Ge'ez numerals use: ፩=1, ፪=2, ፫=3, ፬=4, ፭=5, ፮=6, ፯=7, ፰=8, ፱=9, ፲=10, ፳=20, ፴=30, ፵=40, ፶=50, ፷=60, ፸=70, ፹=80, ፺=90, ፻=100, ፼=10,000.\n"
+        "   - When translating from Ge'ez to Amharic or English, you MUST translate all Ge'ez numerals into standard Arabic digits or standard written words (e.g. 'ምዕራፍ ፩' -> 'ምዕራፍ 1' or 'Chapter 1', 'ቁጥር ፭' -> 'ቁጥር 5' or 'Verse 5', '፲፭' -> '15', '፪ሺ፲፯' -> '2017'). NEVER leave raw, untranslated Ge'ez numerals in Amharic or English output.\n"
+        "   - When translating from English or Amharic to Ge'ez, translate all numbers into authentic Classical Ge'ez numerals (e.g. '1' -> '፩', '5' -> '፭', '10' -> '፲', '15' -> '፲፭', '100' -> '፻')."
     )
+
+
+def prepare_translation_prompt(text, source, target):
+    prompt = build_system_prompt(source, target)
+    extra_notes = []
+    if re.search(r'[፩-፼]', text):
+        mappings = extract_geez_number_mappings(text)
+        if mappings:
+            extra_notes.append(f"Ge'ez numeral values: {mappings}")
+
+    notes_str = f" [Note: {'; '.join(extra_notes)}]" if extra_notes else ""
+    user_content = f"Text to translate from {source} to {target}{notes_str}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    return prompt, user_content
 
 
 def translate_with_gemini(text, source, target):
     client = get_gemini_client()
     if not client:
         raise ValueError("Gemini API key is missing or invalid.")
-    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-    prompt = build_system_prompt(source, target)
-    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    prompt, user_content = prepare_translation_prompt(text, source, target)
     response = client.models.generate_content(
         model=model,
         contents=user_content,
@@ -77,7 +99,8 @@ def translate_with_gemini(text, source, target):
         ),
     )
     res = response.text.strip() if response.text else ""
-    return sanitize_translation_text(res)
+    cleaned = sanitize_translation_text(res)
+    return normalize_ethiopian_numbers(cleaned, source, target)
 
 
 def translate_with_groq(text, source, target):
@@ -85,8 +108,7 @@ def translate_with_groq(text, source, target):
     if not client:
         raise ValueError("Groq API key is missing.")
     model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
-    prompt = build_system_prompt(source, target)
-    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    prompt, user_content = prepare_translation_prompt(text, source, target)
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -100,7 +122,8 @@ def translate_with_groq(text, source, target):
     )
     msg = response.choices[0].message
     content = msg.content or ""
-    return sanitize_translation_text(content)
+    cleaned = sanitize_translation_text(content)
+    return normalize_ethiopian_numbers(cleaned, source, target)
 
 
 def translate_flexible(text, source, target, provider=None):
@@ -147,9 +170,8 @@ def translate_stream_with_gemini(text, source, target):
     client = get_gemini_client()
     if not client:
         raise ValueError("Gemini API key is missing or invalid.")
-    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-    prompt = build_system_prompt(source, target)
-    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    prompt, user_content = prepare_translation_prompt(text, source, target)
     response_stream = client.models.generate_content_stream(
         model=model,
         contents=user_content,
@@ -168,8 +190,7 @@ def translate_stream_with_groq(text, source, target):
     if not client:
         raise ValueError("Groq API key is missing.")
     model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
-    prompt = build_system_prompt(source, target)
-    user_content = f"Text to translate from {source} to {target}:\n\"\"\"\n{text}\n\"\"\"\n\nDirect {target} translation:"
+    prompt, user_content = prepare_translation_prompt(text, source, target)
     stream = client.chat.completions.create(
         model=model,
         messages=[
