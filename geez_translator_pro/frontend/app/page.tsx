@@ -51,14 +51,6 @@ function SparkleIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
-function BoltIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
 function CopyIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,9 +78,8 @@ function SpinnerIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
 }
 
 export default function MasGeezTranslator() {
-  // Theme & Model Provider State
+  // Theme State
   const [isDark, setIsDark] = useState(false);
-  const [provider, setProvider] = useState<'gemini' | 'groq'>('gemini');
 
   // Translation States
   const [inputText, setInputText] = useState("");
@@ -111,7 +102,6 @@ export default function MasGeezTranslator() {
     const filename = fileOrBlob instanceof File ? fileOrBlob.name : 'cropped-image.png';
     formData.append('file', fileOrBlob, filename);
     formData.append('lang', sourceLang);
-    formData.append('provider', provider);
     formData.append('auto_clean', 'true');
 
     try {
@@ -183,13 +173,12 @@ export default function MasGeezTranslator() {
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
     setLoading(true);
-    setStatusMessage(`Translating (${provider})...`);
+    setStatusMessage("Translating...");
     try {
       const res = await axios.post(`${API_BASE}/api/translate-flexible/`, {
         text: inputText,
         source: sourceLang,
         target: targetLang,
-        provider: provider,
       });
       setOutputText(res.data.translation || "");
       setStatusMessage("Done");
@@ -239,31 +228,8 @@ export default function MasGeezTranslator() {
           </span>
         </div>
 
-        {/* Dual Provider Switch + Theme Toggle */}
+        {/* Theme Toggle Button */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Provider Pill (Gemini vs Groq) */}
-          <div className={`flex items-center rounded-full p-0.5 border text-xs font-semibold ${isDark ? 'border-zinc-700 bg-zinc-900' : 'border-zinc-300 bg-zinc-100'}`}>
-            <button
-              type="button"
-              onClick={() => setProvider('gemini')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition ${provider === 'gemini' ? (isDark ? 'bg-zinc-800 text-white shadow-sm' : 'bg-white text-zinc-900 shadow-sm') : (isDark ? 'text-zinc-400 hover:text-white' : 'text-zinc-600 hover:text-black')}`}
-              title="Google Gemini 3.8 Flash (High Quality)"
-            >
-              <SparkleIcon className="w-3 h-3 text-amber-500" />
-              <span>Gemini</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setProvider('groq')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition ${provider === 'groq' ? (isDark ? 'bg-zinc-800 text-white shadow-sm' : 'bg-white text-zinc-900 shadow-sm') : (isDark ? 'text-zinc-400 hover:text-white' : 'text-zinc-600 hover:text-black')}`}
-              title="Groq Qwen 27B (Fast Free Testing)"
-            >
-              <BoltIcon className="w-3 h-3 text-orange-500" />
-              <span>Groq</span>
-            </button>
-          </div>
-
-          {/* Theme Toggle Button */}
           <button 
             type="button"
             onClick={() => setIsDark(!isDark)} 
