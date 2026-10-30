@@ -384,6 +384,20 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `72a5bb5`
+* **Title**: `feat(translation): integrate dynamic religious context awareness and register distinction`
+* **Files Modified**: `backend/translator/translation_service.py`
+* **What Changed**:
+  - Implemented pattern-based domain classifier `is_religious_context(text)` scanning for liturgical, theological, and biblical keywords across Ge'ez, Amharic, and English.
+  - Enhanced `prepare_translation_prompt()` to inject explicit register conditioning into `user_content`:
+    * When religious: instructs LLM to translate with authentic ecclesiastical reverence in the sense and spirit of Ethiopian Orthodox Tewahedo Church (EOTC) tradition.
+    * When secular: instructs LLM to translate in clear, natural contemporary prose without imposing unneeded religious jargon.
+  - Enhanced `build_system_prompt()` with Rule 2 ("Context-Aware Register: Sacred vs. Secular") establishing canonical church vocabulary (`አቡነ ዘበሰማያት`, `በሰላመ ቅዱስ ገብርኤል`, `ሰአሊ ለነ`, `ይስረይ ለነ ኃጣውኢነ`, `ጸባዖት`, `ምልእተ ጸጋ`, `እግዝእትየ`) and Rule 7 ("Target Language Script & Dialect Purity") preventing target script conflation.
+* **What Did NOT Change**: Pure optical OCR pipeline and character extraction remained untouched. Frontend UI, streaming endpoint, and Next.js client components remained unchanged.
+* **Why**: Users frequently translate religious prayers, scriptures, and hymns that require specific ecclesiastical reverence, but also translate secular, historical, or everyday texts. This dynamic conditioning ensures religious texts are translated in a dignified, orthodox sense while secular texts remain natural without forced religious phrasing.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
