@@ -4,7 +4,6 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from pathlib import Path
-from .models import TranslationCache
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / '.env', override=True)
@@ -108,7 +107,7 @@ def translate_flexible(text, source, target, provider=None):
     """
     Unified dual-provider translation:
     - Supports 'gemini' and 'groq'
-    - Respects dynamic provider parameter or .env default (LLM_PROVIDER)
+    - Real-time live inference on every request (no stale cache)
     - Automatically falls back to the other provider if one encounters rate-limits or errors
     """
     if not text or not text.strip():
@@ -117,18 +116,7 @@ def translate_flexible(text, source, target, provider=None):
     cleaned_text = text.strip()
     preferred_provider = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
 
-    # 1. Check database cache
-    cached_hit = TranslationCache.objects.filter(
-        source_text=cleaned_text,
-        source_lang=source,
-        target_lang=target
-    ).first()
-
-    if cached_hit:
-        print("Cache Hit: Returning saved translation from database cache.")
-        return cached_hit.translated_text
-
-    # 2. Call AI Provider with auto-fallback
+    # Call AI Provider with auto-fallback
     translated_result = ""
 
     if preferred_provider == "groq":
@@ -151,17 +139,5 @@ def translate_flexible(text, source, target, provider=None):
                 translated_result = translate_with_groq(cleaned_text, source, target)
             except Exception as e2:
                 return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
-
-    # 3. Save to Cache
-    if translated_result and not translated_result.startswith("Translation Error:"):
-        try:
-            TranslationCache.objects.create(
-                source_text=cleaned_text,
-                source_lang=source,
-                target_lang=target,
-                translated_text=translated_result
-            )
-        except Exception as cache_err:
-            print(f"Cache Save Warning: {cache_err}")
 
     return translated_result
