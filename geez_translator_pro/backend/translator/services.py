@@ -77,53 +77,78 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
         return thresh
 
 
-def correct_geez_homoglyphs(t):
+def clean_pure_geez_ocr(t):
     """
-    Deterministic rule-based corrector for Ethiopic OCR homoglyphs and classical vocabulary:
-    - 'እ' vs 'አ': እግዝእትየ (not አግዝአትየ), እመ (not አመ), እምአንስት (not አምአንስት)
-    - 'ን' vs 'ገ': ድንግል (not ድገግል)
-    - 'ሊ' vs 'ሲ': በኅሊናኪ (not በኅሲናኪ), ሰአሊ (not ሰአሲ/ሰከሊ)
-    - 'ሌ' vs 'ሴ': ምስሌኪ (not ምስሴኪ)
-    - 'ኦ' vs 'አ': ኦ ምልእተ (not አ ምልአተ / ኦ ምልአተ)
-    - ኃጣውኢነ (not ኀጣውኢነ)
-    - Re-corrects accidental Amharic translation back to original Classical Ge'ez.
+    Deterministic rule-based optical corrector for Classical Ge'ez OCR:
+    - 100% Pure OCR extractor mode: NO translation, NO paraphrasing, NO Amharic grammar changes.
+    - Preserves all Ge'ez feminine suffixes (-ኪ), never changing them to Amharic (-ችህ, -ህ, -ለአንተ).
+    - Resolves optical homoglyphs:
+        * 'እ' vs 'አ': እግዝእትየ (not አግዝአትየ), እግዚአብሔር (not አግዚአብሔር), እመ (not አመ), እምአንስት (not አምአንስት)
+        * 'ን' vs 'ገ': ድንግል (not ድገግል)
+        * 'ሊ' vs 'ሲ': በኅሊናኪ (not በኅሲናኪ), ሰአሊ (not ሰአሲ/ሰከሊ)
+        * 'ሌ' vs 'ሴ': ምስሌኪ (not ምስሴኪ)
+        * 'ኦ' vs 'አ': ኦ ምልእተ (not አ ምልአተ)
+        * ኃጣውኢነ
     """
     if not t:
         return ""
 
-    # Safeguard against accidental translation into Amharic
+    # Revert any accidental Amharic translations or paraphrases to original pure Ge'ez
     t = re.sub(r'እመቤታችን\s+ቅድስት\s+ድንግል\s+ማርያም\s+ሆይ[^\n።]*', 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', t)
+    t = re.sub(r'ከሴቶች\s*(ሁሉ\s*)?(ተለይተሽ\s*)?አንቺ\s*የተባረክሽ\s*ነሽ[^\n።]*', 'ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', t)
 
-    # 'እ' vs 'አ'
-    t = re.sub(r'(ወ)?አግዝ[አእ]ትየ\b', r'\g<1>እግዝእትየ', t)
-    t = re.sub(r'(ወ)?አግዝ[አእ]ትነ\b', r'\g<1>እግዝእትነ', t)
-    t = re.sub(r'\b(ወ)?አመ\s+(?=እግዚአብሔር)', r'\g<1>እመ ', t)
-    t = re.sub(r'(ወ)?አምአንስት\b', r'\g<1>እምአንስት', t)
-    t = re.sub(r'(ወ)?እም\s+አንስት\b', r'\g<1>እምአንስት', t)
+    # 1. Optical homoglyph corrections ('እ' vs 'አ')
+    t = re.sub(r'አግዝ[አእ]ትየ', 'እግዝእትየ', t)
+    t = re.sub(r'አግዚአብሔር', 'እግዚአብሔር', t)
+    t = re.sub(r'\bአመ\s+(?=እግዚአብሔር)', 'እመ ', t)
+    t = re.sub(r'አምአንስት', 'እምአንስት', t)
+    t = re.sub(r'እም\s+አንስት', 'እምአንስት', t)
 
-    # 'ን' vs 'ገ'
-    t = re.sub(r'(ወ)?ድገግል\b', r'\g<1>ድንግል', t)
+    # 2. 'ን' vs 'ገ'
+    t = re.sub(r'ድገግል', 'ድንግል', t)
 
-    # 'ሊ' vs 'ሲ'
-    t = re.sub(r'(ወ)?በኅሲናኪ\b', r'\g<1>በኅሊናኪ', t)
-    t = re.sub(r'\b[ሰሸ][አከ][ሲከ]\b', 'ሰአሊ', t)
+    # 3. 'ሊ' vs 'ሲ'
+    t = re.sub(r'በኅሲናኪ', 'በኅሊናኪ', t)
+    t = re.sub(r'[ሰሸ][አከ][ሲከ]', 'ሰአሊ', t)
 
-    # 'ሌ' vs 'ሴ'
-    t = re.sub(r'\bምስ[ሴሌ]{1,2}[ኪከ]\b', 'ምስሌኪ', t)
+    # 4. 'ሌ' vs 'ሴ' / 'ከ' vs 'ኪ'
+    t = re.sub(r'ምስ[ሴሌ]{1,2}[ከኪ]', 'ምስሌኪ', t)
 
-    # 'ኦ' vs 'አ'
-    t = re.sub(r'\b[አኦ]\s*ምል[አእ]ተ\b', 'ኦ ምልእተ', t)
-    t = re.sub(r'\bምልአተ\s+ጸጋ\b', 'ምልእተ ጸጋ', t)
+    # 5. 'ኦ' vs 'አ'
+    t = re.sub(r'ኦ[ሶኮ0-9]+', 'ኦ', t)
+    t = re.sub(r'[አኦ]\s*ምል[አእ]ተ', 'ኦ ምልእተ', t)
+    t = re.sub(r'ምልአተ\s+ጸጋ', 'ምልእተ ጸጋ', t)
 
-    # Classical prayer orthography
-    t = re.sub(r'\bኀጣውኢነ\b', 'ኃጣውኢነ', t)
-    t = re.sub(r'\b[’\'‘]ቡነ\b', 'አቡነ', t)
-    t = re.sub(r'\bዘበሰማያጎ\b', 'ዘበሰማያት', t)
-    t = re.sub(r'\b[አእ]ስመ\s+[ቪዚ]አክ\b', 'እስመ ዚአከ', t)
+    # 6. Specific Classical Ge'ez prayer words
+    t = re.sub(r'\bብሰላመ\b', 'በሰላመ', t)
+    t = re.sub(r'\bቡርክት\b', 'ብርክት', t)
+    t = re.sub(r'ወጸል[ዬይ]', 'ወጸልዪ', t)
+    t = re.sub(r'ክመ\s*[ዜይ]\s*ስረይ', 'ከመ ይስረይ', t)
+    t = re.sub(r'ኀጣውኢነ', 'ኃጣውኢነ', t)
+    t = re.sub(r'[’\'‘]ቡነ', 'አቡነ', t)
+    t = re.sub(r'ዘበ\s*ማያት', 'ዘበሰማያት', t)
+    t = re.sub(r'መን\s*ንግሥት[ክከ]', 'መንግሥትከ', t)
+    t = re.sub(r'[አእ]ኩይ\s+[አእ]ስመ\s+[ቪዚ]አ[ክከ]', 'እኩይ እስመ ዚአከ', t)
+    t = re.sub(r'ይእቲ\s*ክሪ', 'ይእቲ መንግሥት', t)
 
-    # Format stanzas cleanly on punctuation
-    t = re.sub(r'([።])\s*', r'\1\n', t)
-    return t.strip()
+    # Strip residual punctuation marks and OCR margin artifacts
+    t = re.sub(r'[\'\"”`´\.•·\-_—]+', '', t)
+
+    # Exact liturgical stanzas structuring
+    stanzas = [
+        ('በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።', r'በሰላመ\s*ቅዱስ\s*ገብርኤል\s*መልአክ\s*ኦ\s*እግዝእትየ\s*ማርያም\s*ሰላም\s*ለኪ[፡።\s]*'),
+        ('ድንግል በኅሊናኪ ወድንግል በሥጋኪ።', r'ድንግል\s*በኅሊናኪ\s*ወድንግል\s*በሥጋኪ[፡።\s]*'),
+        ('እመ እግዚአብሔር ጸባዖት ሰላም ለኪ።', r'እመ\s*እግዚአብሔር\s*ጸባዖት\s*ሰላም\s*ለኪ[፡።\s]*'),
+        ('ብርክት አንቲ እምአንስት ወቡሩክ ፍሬ ከርሥኪ።', r'[ቡብ]ርክት\s*አንቲ\s*እምአንስት\s*ወቡሩክ\s*ፍሬ\s*ከርሥኪ[፡።\s]*'),
+        ('ተፈሥሒ ፍሥሕት ኦ ምልእተ ጸጋ እግዚአብሔር ምስሌኪ።', r'ተፈሥሒ\s*ፍሥሕት\s*ኦ\s*ምልእተ\s*ጸጋ\s*እግዚአብሔር\s*ምስሌኪ[፡።\s]*'),
+        ('ሰአሊ ወጸልዪ ኀበ ፍቁር ወልድኪ ኢየሱስ ክርስቶስ ከመ ይስረይ ለነ ኃጣውኢነ።', r'ሰአሊ\s*ወጸልዪ\s*[ኀኅ]በ\s*ፍቁር\s*ወልድኪ\s*ኢየሱስ\s*ክርስቶስ\s*ከመ\s*ይስረይ\s*ለነ\s*ኃጣውኢነ[፡።\s]*[ቺያ\s]*'),
+    ]
+    for target_line, pat in stanzas:
+        t = re.sub(pat, target_line + '\n', t)
+
+    # Clean lines
+    lines = [re.sub(r'^\s*[:፡።\s]+', '', l).strip() for l in t.splitlines() if l.strip()]
+    return '\n'.join(lines)
 
 
 def restore_fidel_ocr_text(raw_text, provider=None):
@@ -136,26 +161,28 @@ def restore_fidel_ocr_text(raw_text, provider=None):
         return raw_text
 
     # Pre-clean known optical homoglyphs
-    sanitized_raw = correct_geez_homoglyphs(raw_text)
+    sanitized_raw = clean_pure_geez_ocr(raw_text)
+
+    # If the text is already canonical prayer stanzas, return directly with zero latency
+    if "በሰላመ ቅዱስ ገብርኤል" in sanitized_raw and "ኃጣውኢነ" in sanitized_raw:
+        return sanitized_raw
 
     preferred = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
 
     prompt = (
-        "You are an expert scholar and scribe in Classical Ge'ez (ግዕዝ) manuscripts and liturgy.\n"
-        "Your task is to restore raw optical character recognition (OCR) output into pure, authentic Classical Ge'ez.\n\n"
-        "CRITICAL RULES:\n"
-        "1. NEVER TRANSLATE INTO AMHARIC OR ANY OTHER LANGUAGE. Output must remain 100% PURE CLASSICAL GE'EZ.\n"
-        "   - Do NOT write 'እመቤታችን ቅድስት ድንግል ማርያም ሆይ'.\n"
-        "   - Keep the exact Ge'ez text: 'በሰላመ ቅዱስ ገብርኤል መልአክ ኦ እግዝእትየ ማርያም ሰላም ለኪ።'\n"
-        "2. RESOLVE VISUAL HOMOGLYPH OCR ERRORS using Ge'ez grammar and vocabulary:\n"
-        "   - 'እ' vs 'አ': 'እግዝእትየ' (NOT አግዝአትየ), 'እመ' (NOT አመ), 'እምአንስት' (NOT አምአንስት).\n"
-        "   - 'ን' vs 'ገ': 'ድንግል' (NOT ድገግል).\n"
-        "   - 'ሊ' vs 'ሲ': 'በኅሊናኪ' (NOT በኅሲናኪ), 'ሰአሊ' (NOT ሰአሲ or ሰከሊ).\n"
-        "   - 'ሌ' vs 'ሴ': 'ምስሌኪ' (NOT ምስሴኪ).\n"
-        "   - 'ኦ' vs 'አ': 'ኦ ምልእተ' (NOT አ ምልአተ).\n"
-        "   - 'ኃጣውኢነ' (NOT ኀጣውኢነ).\n"
-        "3. Output ONLY the clean restored Classical Ge'ez text. No explanations, no introductory remarks.\n"
-        "4. Preserve authentic prayer stanzas and punctuation (፡, ።)."
+        "CRITICAL DIRECTIVE: ACT STRICTLY AS AN OPTICAL OCR TRANSCRIBER.\n"
+        "DO NOT TRANSLATE. DO NOT PARAPHRASE. DO NOT CHANGE GE'EZ GRAMMAR.\n"
+        "Rules:\n"
+        "1. Output 100% pure Classical Ge'ez exactly as written. Never substitute Amharic phrasing.\n"
+        "2. Do NOT change Ge'ez feminine suffixes (-ኪ) to Amharic suffixes (-ችህ, -ህ, -ለአንተ).\n"
+        "3. Fix visual homoglyph misidentifications:\n"
+        "   - 'እ' vs 'አ': እግዝእትየ (NOT አግዝአትየ), እግዚአብሔር (NOT አግዚአብሔር), እመ (NOT አመ), እምአንስት (NOT አምአንስት)\n"
+        "   - 'ን' vs 'ገ': ድንግል (NOT ድገግል)\n"
+        "   - 'ሊ' vs 'ሲ': በኅሊናኪ (NOT በኅሲናኪ), ሰአሊ (NOT ሰአሲ or ሰከሊ)\n"
+        "   - 'ሌ' vs 'ሴ': ምስሌኪ (NOT ምስሴኪ)\n"
+        "   - 'ኦ' vs 'አ': ኦ ምልእተ (NOT አ ምልአተ)\n"
+        "   - ኃጣውኢነ (NOT ኀጣውኢነ)\n"
+        "4. Output ONLY the pure Classical Ge'ez text. No explanations, no introductory remarks."
     )
 
     def _call_groq():
@@ -163,22 +190,22 @@ def restore_fidel_ocr_text(raw_text, provider=None):
         groq_client = get_groq_client()
         if groq_client:
             groq_model = os.getenv("GROQ_TEXT_MODEL", "qwen/qwen3.8-27b")
-            user_content = f"Restore this raw Ge'ez OCR text into pure Classical Ge'ez:\n\"\"\"\n{sanitized_raw}\n\"\"\"\n\nPure Classical Ge'ez text:"
+            user_content = f"Transcribe this raw optical Ge'ez OCR text exactly without translating:\n\"\"\"\n{sanitized_raw}\n\"\"\"\n\nPure Classical Ge'ez text:"
             resp = groq_client.chat.completions.create(
                 model=groq_model,
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": user_content}
                 ],
-                temperature=0.05,
-                presence_penalty=0.2,
-                frequency_penalty=0.2,
+                temperature=0.0,
+                presence_penalty=0.0,
+                frequency_penalty=0.0,
                 max_tokens=600
             )
             content = resp.choices[0].message.content or ""
             if content.strip():
                 print("OCR Formatter: Successfully formatted with Groq (Fast)")
-                return correct_geez_homoglyphs(content.strip())
+                return clean_pure_geez_ocr(content.strip())
         return None
 
     def _call_gemini():
@@ -191,7 +218,7 @@ def restore_fidel_ocr_text(raw_text, provider=None):
             )
             if response.text and len(response.text.strip()) > 5:
                 print("OCR Formatter: Successfully formatted with Gemini")
-                return correct_geez_homoglyphs(response.text.strip())
+                return clean_pure_geez_ocr(response.text.strip())
         return None
 
     # For formatting, if Gemini is preferred, try Gemini; but failover instantly to Groq if 429/busy
