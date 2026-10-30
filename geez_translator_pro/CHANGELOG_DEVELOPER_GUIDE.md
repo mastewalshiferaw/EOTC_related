@@ -372,6 +372,18 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `e0f3d03`
+* **Title**: `chore(branding): update logo and branding to አስተርእየ ቃል`
+* **Files Modified**: `frontend/app/page.tsx`, `frontend/app/layout.tsx`
+* **What Changed**:
+  - Updated top navbar brand logo to **"አስተርእየ ቃል"** (Astereye Qal).
+  - Updated bottom footer signature to **"አስተርእየ ቃል Digital Philology"**.
+  - Updated Next.js root layout document title to `"አስተርእየ ቃል"` and meta description to `"አስተርእየ ቃል - Ge'ez Translator Pro"`.
+* **What Did NOT Change**: The entire visual layout, dual-card translation grid, button designs, image cropping modal, theme toggles, and streaming architecture were strictly preserved without any UI changes.
+* **Why**: Replaced generic and temporary branding with the official name and logo **"አስተርእየ ቃል"** across all user-facing surfaces per user directive while preserving the existing user interface.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
