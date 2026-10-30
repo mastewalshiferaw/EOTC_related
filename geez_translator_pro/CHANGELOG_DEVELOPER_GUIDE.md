@@ -345,6 +345,19 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `09528cd`
+* **Title**: `feat(translation): implement real-time SSE streaming for live translation delivery`
+* **Files Modified**: `backend/translator/translation_service.py`, `backend/translator/urls.py`, `backend/translator/views.py`, `frontend/app/page.tsx`
+* **What Changed**:
+  - Implemented streaming generator functions `translate_stream_with_gemini()`, `translate_stream_with_groq()`, and unified dual-provider fallback generator `translate_stream_flexible()` in `translation_service.py`.
+  - Added Server-Sent Events (SSE) streaming view `TranslateStreamView` using Django's `StreamingHttpResponse(..., content_type="text/event-stream; charset=utf-8")` emitting `data: {"chunk": "..."}\n\n` and `data: [DONE]\n\n`.
+  - Exposed route `POST /api/translate-flexible-stream/` in `urls.py`.
+  - Upgraded Next.js `handleTranslate` function in `frontend/app/page.tsx` to read the incoming `ReadableStream` via `response.body.getReader()`, dynamically streaming text tokens into the translation area in real time with automatic fallback to batch `axios.post` if streaming is blocked.
+* **What Did NOT Change**: Existing batch non-streaming `TranslateFlexibleView` endpoint `POST /api/translate-flexible/` was preserved for backward compatibility.
+* **Why**: LLM inference (especially on larger models or free-tier queuing) requires several seconds before the complete response is generated. Streaming displays tokens incrementally as they are inferred, providing immediate visual feedback and eliminating the perception of slow loading.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
