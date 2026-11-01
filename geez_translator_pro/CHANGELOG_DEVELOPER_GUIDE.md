@@ -398,6 +398,20 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `f4119a0`
+* **Title**: `feat(prompt): apply comprehensive EOTC liturgical hymnody and theological typology prompt`
+* **Files Modified**: `backend/translator/translation_service.py`
+* **What Changed**:
+  - Replaced system prompt in `build_system_prompt()` with comprehensive, scholar-grade EOTC hymnody and liturgical poetry guidelines.
+  - Added dedicated rules for sacred liturgical forms: Mahlet (ማኅሌት), Mahlete Tsige (ማኅሌተ ጽጌ), Wereb (ወረብ), Deggwa / Tsome Deggwa (ድጓ / ጾመ ድጓ), Ziq (ዚቅ), Mawaddis (መዋድስ), Qine (ቅኔ), Malk'a (መልክዕ), Saqoqawa Dengel (ሰቆቃወ ድንግል), and Widase Maryam (ውዳሴ ማርያም).
+  - Explicitly codified EOTC Theological Typology (Andemta): prevents naive literal translations of botanical/nature metaphors (flowers/ጽጌ, grape vine/ሐረገ ወይን, fleece/ጸምር, dew/ጠል) into secular nature prose, directing the model to render them according to their authentic Marian and Christological typological meanings.
+  - Added specific directives for Wereb & short hymn chants to render fragments into coherent, sacred poetic sentences.
+  - Expanded `RELIGIOUS_PATTERNS` to automatically recognize hymnodic forms (`ወረብ`, `ድጓ`, `ዚቅ`, `መዋድስ`, `ቅኔ`, `መልክዕ`, `ሰቆቃወ`, `ሐረገ ወይን`, `ጽጌ`).
+* **What Did NOT Change**: Deterministic numeral conversion engine, optical OCR pipeline, SSE streaming endpoint, and Next.js frontend UI components remained unchanged.
+* **Why**: Standard LLMs often fail on Classical Ge'ez hymnody by treating allegorical and typological poetry as secular botanical texts. This prompt anchors the AI directly in orthodox EOTC patristic tradition while strictly preserving natural language for secular texts.
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)
