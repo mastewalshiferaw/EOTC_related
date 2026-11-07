@@ -36,20 +36,35 @@ def get_groq_client():
     return _groq_client
 
 
+PREAMBLE_RE = re.compile(
+    r'^(?:እነሆ\s*ትርጉሙ|ትርጉም|Translation|Here is the translation)\s*[:፡\-]*\s*',
+    re.IGNORECASE,
+)
+
+
+def strip_translation_preamble(text):
+    """Drop a leading "Here is the translation:" style line."""
+    if not text:
+        return ""
+    return PREAMBLE_RE.sub('', text, count=1)
+
+
 def sanitize_translation_text(text):
     """
     Cleans up common LLM artifacts:
     1. Removes degenerate repeating loops (consecutive duplicate phrases/sentences).
     2. Strips conversational preambles (e.g., 'እነሆ ትርጉሙ:', 'Here is the translation:').
+
+    Note: loop collapsing needs a unit of at least 6 characters repeated three
+    times in total, so short-token stutter ("ሰላም ሰላም ሰላም") is deliberately kept —
+    liturgical texts repeat short phrases legitimately.
     """
     if not text:
         return ""
     # Remove consecutive repeating phrases/sentences (at least 6 chars repeated 2+ times)
     pattern = r'(.{6,}?)\s*(?:\1\s*){2,}'
     cleaned = re.sub(pattern, r'\1 ', text)
-    # Strip conversational preambles
-    cleaned = re.sub(r'^(?:እነሆ\s*ትርጉሙ|ትርጉም|Translation|Here is the translation)\s*[:፡\-]*\s*', '', cleaned, flags=re.IGNORECASE)
-    return cleaned.strip()
+    return strip_translation_preamble(cleaned).strip()
 
 
 RELIGIOUS_PATTERNS = [
@@ -183,7 +198,7 @@ def translate_flexible(text, source, target, provider=None):
         return ""
 
     cleaned_text = text.strip()
-    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
+    preferred_provider = str(provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     # Call AI Provider with auto-fallback
     translated_result = ""
@@ -200,7 +215,7 @@ def translate_flexible(text, source, target, provider=None):
                 return f"Translation Error: {str(e)} | Fallback: {str(e2)}"
     else:
         try:
-            print(f"Calling Gemini ({os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')})...")
+            print(f"Calling Gemini ({os.getenv('GEMINI_MODEL', 'gemini-3.5-flash')})...")
             translated_result = translate_with_gemini(cleaned_text, source, target)
         except Exception as e:
             print(f"Gemini error ({e}), attempting Groq fallback...")
@@ -255,6 +270,80 @@ def translate_stream_with_groq(text, source, target):
             yield delta
 
 
+# Characters that can belong to a number in either direction. A numeral may be
+# split across two LLM chunks ("፲" then "፭"), so a trailing run of them is held
+# back until it is complete; converting the halves separately would give "105"
+# instead of "15".
+_NUMERAL_TAIL_CHARS = set("፩፪፫፬፭፮፯፰፱፲፳፴፵፶፷፸፹፺፻፼ሺ0123456789")
+
+
+_PREAMBLE_PHRASES = ("እነሆ ትርጉሙ", "ትርጉም", "translation", "here is the translation")
+# Any character that can appear in a preamble line plus its separators.
+_PREAMBLE_CHARS = set(" ".join(_PREAMBLE_PHRASES).lower()) | set(" :፡-\t\n")
+_PREAMBLE_MAX_HOLD = 40
+
+
+def _is_partial_preamble(text):
+    """True while text could still grow into a preamble that must be stripped.
+
+    The preamble can be split over several chunks ("Here is the " +
+    "translation: "), so the head is held back for a moment. Judging by
+    character set rather than by prefix keeps the leftover ": " separator from
+    being emitted when it lands in the chunk after the words.
+    """
+    head = text.lstrip()
+    if not head:
+        return True
+    return set(head.lower()) <= _PREAMBLE_CHARS
+
+
+def _split_off_numeral_tail(text):
+    """Split text into (safe_to_convert, trailing_numeral_run)."""
+    cut = len(text)
+    while cut > 0 and text[cut - 1] in _NUMERAL_TAIL_CHARS:
+        cut -= 1
+    return text[:cut], text[cut:]
+
+
+def postprocess_translation_stream(chunks, source, target):
+    """Apply the batch path's post-processing to a chunk stream.
+
+    The batch endpoint sanitizes and normalizes the finished text; without this
+    the SSE endpoint (the only one the UI uses) leaked raw Ge'ez numerals into
+    Amharic/English output. Loop collapsing stays batch-only: it needs the whole
+    response, and buffering it would defeat streaming.
+    """
+    pending = ""
+    head = ""
+    started = False
+
+    for chunk in chunks:
+        if not chunk:
+            continue
+
+        if not started:
+            head += chunk
+            if _is_partial_preamble(head) and len(head) < _PREAMBLE_MAX_HOLD:
+                continue
+            chunk = strip_translation_preamble(head)
+            head = ""
+            started = True
+            if not chunk:
+                continue
+
+        pending += chunk
+        ready, pending = _split_off_numeral_tail(pending)
+        if ready:
+            yield normalize_ethiopian_numbers(ready, source, target)
+
+    if not started:
+        # Whole response was shorter than the preamble decision window.
+        pending += strip_translation_preamble(head)
+
+    if pending:
+        yield normalize_ethiopian_numbers(pending, source, target)
+
+
 def translate_stream_flexible(text, source, target, provider=None):
     """
     Streaming generator for live translation:
@@ -265,28 +354,37 @@ def translate_stream_flexible(text, source, target, provider=None):
         return
 
     cleaned_text = text.strip()
-    preferred_provider = (provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
+    preferred_provider = str(provider or os.getenv("LLM_PROVIDER", "gemini")).lower()
 
     if preferred_provider == "groq":
-        try:
-            for chunk in translate_stream_with_groq(cleaned_text, source, target):
-                yield chunk
-        except Exception as e:
-            print(f"Groq stream error ({e}), attempting Gemini fallback...")
-            try:
-                for chunk in translate_stream_with_gemini(cleaned_text, source, target):
-                    yield chunk
-            except Exception as e2:
-                yield f"\n[Translation Error: {str(e)} | Fallback: {str(e2)}]"
+        primary, secondary, primary_name = (
+            translate_stream_with_groq, translate_stream_with_gemini, "Groq"
+        )
     else:
+        primary, secondary, primary_name = (
+            translate_stream_with_gemini, translate_stream_with_groq, "Gemini"
+        )
+
+    emitted = False
+    try:
+        for chunk in postprocess_translation_stream(
+            primary(cleaned_text, source, target), source, target
+        ):
+            emitted = True
+            yield chunk
+    except Exception as e:
+        if emitted:
+            # Text already reached the browser; replaying the full translation
+            # from the other provider would duplicate it, so just report.
+            print(f"{primary_name} stream failed mid-response ({e}).")
+            yield f"\n[Translation Error: {str(e)}]"
+            return
+        print(f"{primary_name} stream error ({e}), attempting fallback...")
         try:
-            for chunk in translate_stream_with_gemini(cleaned_text, source, target):
+            for chunk in postprocess_translation_stream(
+                secondary(cleaned_text, source, target), source, target
+            ):
                 yield chunk
-        except Exception as e:
-            print(f"Gemini stream error ({e}), attempting Groq fallback...")
-            try:
-                for chunk in translate_stream_with_groq(cleaned_text, source, target):
-                    yield chunk
-            except Exception as e2:
-                yield f"\n[Translation Error: {str(e)} | Fallback: {str(e2)}]"
+        except Exception as e2:
+            yield f"\n[Translation Error: {str(e)} | Fallback: {str(e2)}]"
 
