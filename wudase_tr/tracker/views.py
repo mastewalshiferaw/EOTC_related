@@ -3,20 +3,38 @@ from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg
-from datetime import date, timedelta
+from datetime import timedelta
 from .models import Paragraph, DailyReview, ReviewLog
 from .forms import ParagraphForm
 
+VALID_RATINGS = {ReviewLog.FORGOT, ReviewLog.HARD, ReviewLog.EASY}
+
+
+def _parse_rating(raw):
+    """Coerce a submitted rating into a valid 1/2/3 value.
+
+    Anything missing, non-numeric or out of range falls back to FORGOT (1) so a
+    malformed POST can never 500 or silently record false mastery.
+    """
+    try:
+        rating = int(raw)
+    except (TypeError, ValueError):
+        return ReviewLog.FORGOT
+    return rating if rating in VALID_RATINGS else ReviewLog.FORGOT
+
 @login_required
 def dashboard(request):
-    reviewed_dates = DailyReview.objects.filter(user=request.user).values_list('date', flat=True).order_by('-date')
+    reviewed_dates = set(
+        DailyReview.objects.filter(user=request.user).values_list('date', flat=True)
+    )
     streak = 0
-    check_date = date.today()
-    if check_date not in reviewed_dates: check_date -= timedelta(days=1)
+    check_date = timezone.localdate()
+    if check_date not in reviewed_dates:
+        check_date -= timedelta(days=1)
     while check_date in reviewed_dates:
         streak += 1
         check_date -= timedelta(days=1)
-        
+
     paragraphs = Paragraph.objects.filter(user=request.user).annotate(avg_rating=Avg('reviewlog__rating'))
     return render(request, 'tracker/dashboard.html', {'paragraphs': paragraphs, 'streak': streak})
 
@@ -55,10 +73,10 @@ def delete_paragraph(request, pk):
 
 @login_required
 def daily_recall(request):
-    today = timezone.now().date()
+    today = timezone.localdate()
     if request.method == 'POST':
         para_id = request.POST.get('para_id')
-        rating = request.POST.get('rating', '1') 
+        rating = _parse_rating(request.POST.get('rating'))
         para = get_object_or_404(Paragraph, id=para_id, user=request.user)
         ReviewLog.objects.create(user=request.user, paragraph=para, rating=rating)
         para.last_reviewed = today
@@ -68,11 +86,15 @@ def daily_recall(request):
         return redirect('daily_recall')
 
     to_review = Paragraph.objects.filter(user=request.user).exclude(last_reviewed=today)
-    if not to_review.exists(): return render(request, 'tracker/finished.html')
+    if not to_review.exists():
+        return render(request, 'tracker/finished.html')
 
+    remaining = to_review.count()
     total = Paragraph.objects.filter(user=request.user).count()
+    reviewed = total - remaining
     return render(request, 'tracker/recall.html', {
         'para': to_review.order_by('last_reviewed').first(),
-        'remaining': to_review.count(),
-        'total': total
+        'remaining': remaining,
+        'total': total,
+        'percent_done': int(reviewed * 100 / total) if total else 0,
     })
