@@ -3,14 +3,14 @@
 <div class="text-center">
     <h2>Recall: {{ para.day_name }} - Part {{ para.order_index }}</h2>
     
-    <!-- Progress Bar -->
-    {% with percent=remaining|divisibleby:total %}
+    <!-- Progress Bar: percent_done is completed paragraphs / total -->
     <div class="progress my-3" style="height: 20px;">
-        <div class="progress-bar bg-success" role="progressbar" style="width: {{ percent }}%;">
-            {{ remaining }} remaining
+        <div class="progress-bar bg-success" role="progressbar"
+             aria-valuenow="{{ percent_done }}" aria-valuemin="0" aria-valuemax="100"
+             style="width: {{ percent_done }}%;">
+            {{ percent_done }}% &middot; {{ remaining }} remaining
         </div>
     </div>
-    {% endwith %}
 
     <div class="my-4">
         <img src="{{ para.image.url }}" class="img-fluid border shadow" style="max-height: 500px;">
