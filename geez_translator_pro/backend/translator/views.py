@@ -10,6 +10,21 @@ from rest_framework.response import Response
 from .services import perform_hybrid_ocr, restore_fidel_ocr_text
 from .translation_service import translate_flexible, translate_stream_flexible
 
+
+def _as_bool(value, default=False):
+    """Parse a flag that may arrive as a JSON boolean or as a form string."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {'true', '1', 'yes', 'on'}
+
+
+def _text_param(request):
+    """Return the submitted text as a string, or '' when absent/not a string."""
+    value = request.data.get('text', '')
+    return value if isinstance(value, str) else ''
+
 class HealthCheckView(APIView):
     """
     Render Health Check Endpoint:
@@ -67,7 +82,9 @@ class OCROnlyView(APIView):
         # Fast local OCR: returns in < 0.5s
         lang = request.data.get('lang', 'amh')
         provider = request.data.get('provider')
-        auto_clean = request.data.get('auto_clean', 'true').lower() == 'true'
+        # JSON clients send a real boolean; form clients send 'true'. Calling
+        # .lower() on a bool used to raise AttributeError and return a 500.
+        auto_clean = _as_bool(request.data.get('auto_clean'), default=True)
         
         text = perform_hybrid_ocr(file.read(), lang=lang, provider=provider, auto_clean=auto_clean)
         active_provider = provider or os.getenv("LLM_PROVIDER", "gemini")
@@ -75,14 +92,18 @@ class OCROnlyView(APIView):
 
 class CleanOCRView(APIView):
     def post(self, request):
-        text = request.data.get('text', '')
+        text = _text_param(request)
+        if not text.strip():
+            return Response({"error": "Empty text provided"}, status=status.HTTP_400_BAD_REQUEST)
         provider = request.data.get('provider')
         cleaned = restore_fidel_ocr_text(text, provider=provider)
         return Response({"text": cleaned})
 
 class TranslateFlexibleView(APIView):
     def post(self, request):
-        text = request.data.get('text', '')
+        text = _text_param(request)
+        if not text.strip():
+            return Response({"error": "Empty text provided"}, status=status.HTTP_400_BAD_REQUEST)
         source = request.data.get('source', "Ge'ez")
         target = request.data.get('target', "Amharic")
         provider = request.data.get('provider')
@@ -105,12 +126,12 @@ class TranslateStreamView(APIView):
     permission_classes = []
 
     def post(self, request):
-        text = request.data.get('text', '')
+        text = _text_param(request)
         source = request.data.get('source', "Ge'ez")
         target = request.data.get('target', "Amharic")
         provider = request.data.get('provider')
 
-        if not text or not text.strip():
+        if not text.strip():
             return Response({"error": "Empty text provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         def event_stream():
