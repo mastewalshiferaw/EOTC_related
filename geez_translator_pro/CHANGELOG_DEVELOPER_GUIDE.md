@@ -412,6 +412,21 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `e7a1b92`
+* **Title**: `fix(ocr): integrate polarity detection and multi-spectral equalization for dark background mixed-color text`
+* **Files Modified**: `backend/translator/services.py`, `backend/translator/tests.py`
+* **What Changed**:
+  - Added perimeter background luminance sampling in `preprocess_image_bytes()` to detect dark background polarity (dark mode, presentation slides, black background images).
+  - On dark backgrounds, computes `max(R, G, B)` across color channels to equalize both white text and colored/red rubrics against the black background, and inverts the result so Tesseract receives dark characters on clean white background.
+  - Added optical homoglyph rule `\bከርስቶስ\b -> ክርስቶስ` to repair foot-hook confusion between 1st order `ከ` and 6th order `ክ`.
+  - Added unit test in `OcrCleanupTests` verifying dark background detection and red text preservation.
+* **What Did NOT Change**: The translation engine, numeral normalization, and Next.js frontend components remained unchanged.
+* **Why**: The previous preprocessor assumed dark ink on a light parchment background (`min(G, B)`). When processing dark-mode or black-background images containing both white text and red rubrics, red text pixels were crushed to near-black, causing Tesseract's binarizer to classify all red words as background and omit them from the OCR output.
+
+---
+
+---
+
 ## 4. Developer Reference & Operating Instructions
 
 ### Environment Configuration (`backend/.env`)

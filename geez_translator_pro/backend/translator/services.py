@@ -36,45 +36,74 @@ def get_gemini_client():
 
 def preprocess_image_bytes(image_bytes, is_ethiopic=True):
     """
-    Fast & Accurate Image Preprocessor (~0.05s):
-    1. Red-Ink Equalization: Extracts min(G, B) channels to ensure red liturgical ink
-       (ቀይ ቀለም / rubrics) is as dark and legible as black ink on parchment.
-    2. Adaptive Scaling: Rescales image to ~1200px optimal line height with cubic interpolation.
-    3. Bilateral Denoising: Preserves Fidel vowel diacritics and loops while smoothing paper grain.
-    Note: Artificial white border padding (copyMakeBorder value=255) is intentionally excluded
-    as high-contrast borders fool Tesseract's layout analyzer into treating manuscripts as non-text.
+    Fast & Accurate Adaptive Image Preprocessor (~0.05s):
+    1. Polarity & Background Luminance Detection:
+       Samples image perimeter to automatically distinguish Light Backgrounds (white paper,
+       parchment, manuscripts) from Dark Backgrounds (dark mode, presentation slides, inverted text).
+    2. Multi-Spectral Color & Red-Ink Equalization:
+       - On Dark Backgrounds: Computes max(R, G, B) to capture both white text and colored/red
+         rubrics with identical high brightness against the black background, then inverts
+         so Tesseract receives dark text on a clean white background.
+       - On Light Backgrounds: Computes min(G, B) channel equalization blended with grayscale
+         so red liturgical rubrics (ቀይ ቀለም) have identical dark density to black ink without bleaching.
+    3. Adaptive Scaling: Rescales image to ~1200px optimal character height with cubic interpolation.
+    4. Bilateral Denoising: Preserves fine Fidel vowel diacritics and loops while smoothing background grain.
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         return None
 
-    if is_ethiopic:
-        # Red-ink liturgical equalization:
-        red_equalized = np.minimum(img[:, :, 0], img[:, :, 1])
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        blended = cv2.addWeighted(red_equalized, 0.65, gray, 0.35, 0)
+    h, w, _ = img.shape
 
-        # Scale to optimal height (~1200px) with cubic interpolation
-        h, w = blended.shape
-        if max(h, w) < 1200:
-            scale = 1200.0 / max(h, w)
-            blended = cv2.resize(blended, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    # Sample perimeter border (top, bottom, left, right 5%) to detect true background color
+    margin_y = max(1, h // 20)
+    margin_x = max(1, w // 20)
+    border_pixels = np.concatenate([
+        img[:margin_y, :].reshape(-1, 3),
+        img[-margin_y:, :].reshape(-1, 3),
+        img[:, :margin_x].reshape(-1, 3),
+        img[:, -margin_x:].reshape(-1, 3)
+    ], axis=0)
 
-        # Gentle bilateral filter to smooth paper fibers without smudging Fidel vowel dots
-        processed = cv2.bilateralFilter(blended, d=5, sigmaColor=50, sigmaSpace=50)
-        return processed
+    bg_median = np.median(border_pixels, axis=0)  # [B, G, R]
+    bg_luminance = 0.114 * bg_median[0] + 0.587 * bg_median[1] + 0.299 * bg_median[2]
+    is_dark_bg = bg_luminance < 120
+
+    if is_dark_bg:
+        # DARK BACKGROUND (e.g. black background, dark mode, inverted presentation slides)
+        # Max across B, G, R channels gives equal peak response to white text (B=G=R=high)
+        # and colored text (e.g. red rubrics R=high, B/G=low, or gold/cyan/green).
+        max_channel = np.maximum(np.maximum(img[:, :, 0], img[:, :, 1]), img[:, :, 2])
+        norm = cv2.normalize(max_channel, None, 0, 255, cv2.NORM_MINMAX)
+        # Invert so Tesseract receives standard dark characters on light background
+        equalized = 255 - norm
     else:
-        # Latin / English preprocessing with CLAHE and Otsu
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        h, w = gray.shape
-        if max(h, w) < 1400:
-            scale = 1400.0 / max(h, w)
-            gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
-        _, thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return thresh
+        # LIGHT BACKGROUND (e.g. parchment, white paper, manuscripts)
+        if is_ethiopic:
+            # Red liturgical ink equalization: taking min(B, G) makes red rubrics as dark as black ink
+            red_equalized = np.minimum(img[:, :, 0], img[:, :, 1])
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blended = cv2.addWeighted(red_equalized, 0.65, gray, 0.35, 0)
+            equalized = cv2.normalize(blended, None, 0, 255, cv2.NORM_MINMAX)
+        else:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+            equalized = clahe.apply(gray)
+
+    # Adaptive scaling to optimal character height (~1200px max dimension)
+    target_dim = 1200 if is_ethiopic else 1400
+    if max(h, w) < target_dim:
+        scale = float(target_dim) / max(h, w)
+        equalized = cv2.resize(equalized, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+    # Gentle bilateral filter to smooth paper grain without blurring diacritic marks
+    processed = cv2.bilateralFilter(equalized, d=5, sigmaColor=50, sigmaSpace=50)
+
+    if not is_ethiopic and not is_dark_bg:
+        _, processed = cv2.threshold(processed, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    return processed
 
 
 def clean_pure_geez_ocr(t):
@@ -104,6 +133,9 @@ def clean_pure_geez_ocr(t):
     # 2. Fix specific typographical and homoglyph errors requested by user:
     # 'አግዚአብሔር' -> 'እግዚአብሔር' (in all places it appears)
     t = re.sub(r'አግዚአብሔር', 'እግዚአብሔር', t)
+
+    # 'ከርስቶስ' -> 'ክርስቶስ' (optical 1st vs 6th order foot hook confusion)
+    t = re.sub(r'\bከርስቶስ\b', 'ክርስቶስ', t)
 
     # 'አነቲ' -> 'አንቲ'
     t = re.sub(r'\bአነቲ\b', 'አንቲ', t)
@@ -239,10 +271,6 @@ def perform_hybrid_ocr(image_bytes, lang="amh", provider=None, auto_clean=True):
             print(f"Cloud Vision fallback bypassed ({vision_err})")
 
         return clean_pure_geez_ocr(local_text) if (local_text and is_ethiopic) else (local_text if local_text else "No text detected.")
-
-    except Exception as e:
-        print(f"OCR Pipeline Exception: {e}")
-        return f"OCR Pipeline Error: {str(e)}"
 
     except Exception as e:
         print(f"OCR Pipeline Exception: {e}")
