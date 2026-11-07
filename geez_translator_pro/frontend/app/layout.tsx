@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "አስተርእየ ቃል",
-  description: "አስተርእየ ቃል - Ge'ez Translator Pro",
+  description: "አስተርእየ ቃል",
 };
 
 export default function RootLayout({

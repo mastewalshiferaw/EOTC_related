@@ -256,9 +256,6 @@ export default function MasGeezTranslator() {
           <span className={`font-black text-xl sm:text-2xl tracking-tight ${isDark ? 'text-white' : 'text-zinc-900'}`}>
             አስተርእየ ቃል
           </span>
-          <span className={`text-[9px] sm:text-[10px] border px-1.5 sm:px-2 py-0.5 rounded font-bold tracking-widest uppercase ${isDark ? 'border-zinc-700 text-zinc-400 bg-zinc-900' : 'border-zinc-300 text-zinc-600 bg-zinc-100'}`}>
-            Translator Pro
-          </span>
         </div>
 
         {/* Theme Toggle Button */}

@@ -425,6 +425,15 @@ The following is an exhaustive chronological breakdown of all commits made in th
 
 ---
 
+### Commit `61c9e83`
+* **Title**: `chore(branding): remove 'Translator Pro' badge and subtitle from frontend navbar and metadata`
+* **Files Modified**: `frontend/app/page.tsx`, `frontend/app/layout.tsx`
+* **What Changed**:
+  - Removed the `"Translator Pro"` badge pill from the top navbar next to **አስተርእየ ቃል**.
+  - Updated document description in `layout.tsx` to cleanly feature **አስተርእየ ቃል**.
+* **What Did NOT Change**: All translation, OCR, theme toggling, and layout functionality remain unchanged.
+* **Why**: Per user instruction, simplified the brand header to exclusively display the clean title **አስተርእየ ቃል**.
+
 ---
 
 ## 4. Developer Reference & Operating Instructions
