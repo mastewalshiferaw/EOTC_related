@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Paragraph(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -15,22 +16,29 @@ class Paragraph(models.Model):
 
 class DailyReview(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
+    # Not auto_now_add: that stores the *server's* local date while views query
+    # with timezone.localdate(), so the two disagree whenever the box's timezone
+    # differs from TIME_ZONE and get_or_create inserts a fresh row every review.
+    date = models.DateField(default=timezone.localdate)
     paragraphs_reviewed = models.ManyToManyField(Paragraph)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'date'], name='unique_daily_review_per_user'
+            )
+        ]
+
 class ReviewLog(models.Model):
+    # 1=Forgot, 2=Hard, 3=Easy
+    FORGOT = 1
+    HARD = 2
+    EASY = 3
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     paragraph = models.ForeignKey(Paragraph, on_delete=models.CASCADE)
-    reviewed_at = models.DateField(auto_now_add=True)
+    reviewed_at = models.DateField(default=timezone.localdate)
+    rating = models.IntegerField(default=FORGOT)
 
     def __str__(self):
         return f"{self.user.username} reviewed {self.paragraph.day_name} on {self.reviewed_at}"
-    
-
-
-class ReviewLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    paragraph = models.ForeignKey(Paragraph, on_delete=models.CASCADE)
-    reviewed_at = models.DateField(auto_now_add=True)
-    # 1=Forgot, 2=Hard, 3=Easy
-    rating = models.IntegerField(default=1)
