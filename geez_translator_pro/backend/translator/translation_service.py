@@ -179,7 +179,7 @@ def translate_with_groq(text, source, target):
         temperature=0.2,
         presence_penalty=0.5,
         frequency_penalty=0.5,
-        max_tokens=1000,
+        max_tokens=4096,
     )
     msg = response.choices[0].message
     content = msg.content or ""
@@ -261,7 +261,7 @@ def translate_stream_with_groq(text, source, target):
         temperature=0.2,
         presence_penalty=0.5,
         frequency_penalty=0.5,
-        max_tokens=1000,
+        max_tokens=4096,
         stream=True,
     )
     for chunk in stream:
