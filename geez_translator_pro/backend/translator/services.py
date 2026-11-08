@@ -34,6 +34,38 @@ def get_gemini_client():
     return _gemini_client
 
 
+def deskew_image(img, bg_median, is_dark_bg=False):
+    """
+    Automatic orientation & deskew correction:
+    1. Detects text baseline angles using Hough Line Transform on horizontal gradients.
+    2. If text slant is between 0.6° and 35°, applies an affine rotation around image center
+       using the detected background color for padding, ensuring Tesseract receives level text.
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+    if lines is None:
+        return img
+    angles = []
+    for l in lines:
+        x1, y1, x2, y2 = l.flatten()
+        deg = np.degrees(np.arctan2(y2 - y1, x2 - x1))
+        if abs(deg) <= 35:
+            angles.append(deg)
+    if not angles or len(angles) < 5:
+        return img
+    median_angle = float(np.median(angles))
+    if abs(median_angle) < 0.6:
+        return img
+
+    h, w = img.shape[:2]
+    center = (w // 2, h // 2)
+    border_val = tuple(map(int, bg_median)) if len(img.shape) == 3 else int(np.mean(bg_median))
+    rot_mat = cv2.getRotationMatrix2D(center, median_angle, 1.0)
+    rotated = cv2.warpAffine(img, rot_mat, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=border_val)
+    return rotated
+
+
 def preprocess_image_bytes(image_bytes, is_ethiopic=True):
     """
     Fast & Accurate Adaptive Image Preprocessor (~0.05s):
@@ -69,6 +101,9 @@ def preprocess_image_bytes(image_bytes, is_ethiopic=True):
     bg_median = np.median(border_pixels, axis=0)  # [B, G, R]
     bg_luminance = 0.114 * bg_median[0] + 0.587 * bg_median[1] + 0.299 * bg_median[2]
     is_dark_bg = bg_luminance < 120
+
+    # Auto-deskew slanted text lines back to horizontal level
+    img = deskew_image(img, bg_median, is_dark_bg=is_dark_bg)
 
     if is_dark_bg:
         # DARK BACKGROUND (e.g. black background, dark mode, inverted presentation slides)

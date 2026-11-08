@@ -682,3 +682,30 @@ class StreamEndpointTests(TestCase):
             "".join(e["chunk"] for e in events if "chunk" in e),
             "\u121d\u12d5\u122b\u134d 15",
         )
+
+
+class DeskewImageTests(TestCase):
+    def test_deskew_no_lines_returns_same_image(self):
+        import numpy as np
+        from .services import deskew_image
+
+        blank = np.zeros((100, 100, 3), dtype=np.uint8)
+        result = deskew_image(blank, [0, 0, 0])
+        self.assertEqual(result.shape, blank.shape)
+        np.testing.assert_array_equal(result, blank)
+
+    def test_deskew_slanted_lines_rotates(self):
+        import cv2
+        import numpy as np
+        from .services import deskew_image
+
+        # Create image with slanted black lines on white canvas
+        img = np.full((300, 300, 3), 255, dtype=np.uint8)
+        # Draw parallel lines tilted around 5 degrees
+        for y in [60, 120, 180, 240]:
+            cv2.line(img, (20, y), (280, y + 25), (0, 0, 0), 2)
+
+        result = deskew_image(img, [255, 255, 255], is_dark_bg=False)
+        self.assertEqual(result.shape, img.shape)
+        self.assertIsNotNone(result)
+
